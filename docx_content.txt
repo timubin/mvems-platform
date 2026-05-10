@@ -1,0 +1,2136 @@
+
+MULTIVENDOR EVENT MANAGEMENT SYSTEM
+Enterprise SaaS Platform
+Full Product Feature Documentation
+
+12+
+Modules
+5
+User Roles
+100+
+Features
+Enterprise
+Grade
+
+Version 1.0  |  2025  |  Confidential
+
+SECTION 1 — EXECUTIVE SUMMARY
+
+1. Product Overview & Vision
+The Multivendor Event Management System (MVEMS) is a cloud-native, enterprise-grade SaaS platform designed to unify the complete lifecycle of event operations — from discovery and ticketing to real-time seat booking, vendor management, and post-event analytics. It serves four distinct personas: Super Admins, Organizers, Vendors, and Attendees, each with fine-grained role-based access controls.
+
+1.1 Core Value Proposition
+Eliminate double-booking through Redis-based distributed seat locking
+Reduce organizer overhead with an end-to-end self-service dashboard
+Maximize revenue with dynamic pricing, coupons, and multi-tier ticketing
+Enable vendors to operate autonomously within an event ecosystem
+Deliver real-time operational visibility via WebSocket-driven dashboards
+
+1.2 Platform Goals
+Goal
+Description
+KPI Target
+High Availability
+Platform accessible 99.9% of the time
+< 1 hr downtime/month
+Concurrency
+Handle simultaneous high-traffic bookings
+1,000+ concurrent users
+Performance
+Fast API responses for booking flows
+< 300ms p95 latency
+Security
+Enterprise-grade auth and payment security
+Zero critical CVEs
+Scalability
+Horizontal scale with zero-downtime deploys
+Auto-scale on demand
+
+
+SECTION 2 — USER ROLES & RBAC
+
+2. Role-Based Access Control (RBAC)
+MVEMS implements a hierarchical RBAC model with five distinct roles. Each role has a strictly defined permission boundary, and permissions are enforced at both the API middleware and UI render layers.
+
+2.1 Role Hierarchy Diagram
+Role
+Level
+Scope
+Key Abilities
+Super Admin
+L5 — Platform
+Global
+Full system control, user management, billing
+Organizer
+L4 — Tenant
+Per-Account
+Create events, manage tickets, view analytics
+Vendor
+L3 — Participant
+Per-Event
+Manage booth, track sales, upload assets
+Staff / Moderator
+L2 — Operational
+Per-Event
+Check-in attendees, manage sessions
+Attendee
+L1 — Consumer
+Self
+Browse, book, review, cancel own tickets
+
+2.2 Super Admin
+
+Role Description
+The Super Admin has unrestricted system access. Typically a platform operations team member. There is only ONE root Super Admin; additional admins can be promoted.
+
+Permissions
+Manage all user accounts (create, suspend, delete, impersonate)
+Approve or reject organizer-submitted events
+Access platform-wide analytics and revenue dashboards
+Manage subscription plans and billing records
+Force-cancel events and trigger bulk refunds
+Configure system settings: payment gateways, email providers, feature flags
+Access audit logs for all user actions
+Manage MFA enforcement policies
+
+2.3 Organizer
+
+Role Description
+Organizers are businesses or individuals who create and manage events. They operate within their own account namespace and can invite Staff members to their events.
+
+Permissions
+Create, edit, duplicate, and delete events
+Define ticket tiers, pricing, and availability windows
+Publish or unpublish events; submit for admin approval
+View per-event sales, revenue, and attendee analytics
+Process manual refunds and issue complimentary tickets
+Manage vendor applications and booth assignments
+Configure event sessions, speakers, and agenda
+Export attendee lists (CSV/PDF)
+Set event-specific discount codes and early-bird pricing
+
+2.4 Vendor
+
+Role Description
+Vendors are businesses that apply to participate in events with a booth or stall. Each vendor operates independently within the events they are approved for.
+
+Permissions
+Browse open vendor calls for events
+Submit booth application with business profile and requirements
+Manage booth details: name, description, images, product catalogue
+Track booth-level sales (if integrated with POS)
+Communicate with Organizer via in-platform messaging
+Access event logistics and setup schedule
+
+2.5 Staff / Moderator
+
+Role Description
+Staff are invited by Organizers to assist in event operations. Their permissions are scoped to a single event and configured by the Organizer.
+
+Permissions
+Scan QR codes for attendee check-in
+Manually override check-in status
+View session schedules and speaker details
+Flag incidents or issues to the Organizer
+Access read-only attendee list for assigned sessions
+
+2.6 Attendee (End User)
+
+Role Description
+Attendees are the end-consumers of the platform. They self-register, discover events, purchase tickets, and interact with event content.
+
+Permissions
+Register and manage personal profile
+Browse and search all public events
+Purchase and manage tickets (view, transfer, cancel)
+Download e-tickets and QR codes
+Submit post-event reviews and ratings
+Manage notification preferences
+
+
+SECTION 3 — COMPLETE MODULE DOCUMENTATION
+
+3. All Platform Modules — In-Depth
+MVEMS is architected around 12 independent modules. Each module owns its domain logic, its database schema, and its API surface. Modules communicate via internal service calls or an event bus (for async operations).
+
+#
+Module
+Domain
+Primary Users
+Complexity
+01
+Authentication & Authorization
+Identity
+All Roles
+High
+02
+User & Profile Management
+Identity
+All Roles
+Medium
+03
+Event Management
+Core
+Organizer, Admin
+High
+04
+Ticketing System
+Core
+Organizer, Attendee
+High
+05
+Seat Booking Engine
+Core
+Attendee
+Critical
+06
+Order Management
+Transaction
+Attendee, Organizer
+High
+07
+Payment & Refund System
+Transaction
+All
+Critical
+08
+Notification System
+Communication
+All
+Medium
+09
+Real-Time System
+Infrastructure
+All
+High
+10
+Analytics & Reporting
+Intelligence
+Organizer, Admin
+High
+11
+Vendor Management
+Ecosystem
+Vendor, Organizer
+Medium
+12
+Review & Feedback System
+Community
+Attendee
+Low
+
+
+MODULE 01 — AUTHENTICATION & AUTHORIZATION
+
+Module 01: Authentication & Authorization
+The Auth module is the security gateway for the entire platform. It handles identity verification, session management, multi-factor authentication, and token lifecycle. All subsequent modules depend on tokens issued by this module.
+
+01.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+AUTH-01
+Email/Password Registration
+Standard credential-based signup with email verification OTP
+P0
+AUTH-02
+Social OAuth Login
+Google, Facebook OAuth 2.0 login (JWT issued post-auth)
+P1
+AUTH-03
+JWT Access Token
+Short-lived (15 min) signed JWT issued on login
+P0
+AUTH-04
+Refresh Token
+Long-lived (7-day) token stored in HttpOnly cookie
+P0
+AUTH-05
+Multi-Factor Authentication
+TOTP (Google Authenticator) and email OTP support
+P1
+AUTH-06
+Role Assignment
+Super Admin assigns roles; Organizer role via application flow
+P0
+AUTH-07
+Password Reset
+Secure token-based password reset via email link (15 min expiry)
+P0
+AUTH-08
+Session Revocation
+Admin can force-logout any user; token blacklist via Redis
+P1
+AUTH-09
+Rate Limiting
+5 failed login attempts triggers 15-min lockout
+P0
+AUTH-10
+Audit Log
+All auth events (login, logout, password change) are logged
+P1
+
+01.2 Authentication Flow
+Standard Login Flow
+User submits email + password to POST /api/auth/login
+System validates credentials against bcrypt hash
+If MFA enabled: prompt TOTP code, verify against secret
+Issue JWT Access Token (15 min) + Refresh Token (7 days)
+Refresh Token stored in HttpOnly, Secure, SameSite=Strict cookie
+Access Token returned in response body for API calls
+
+Token Refresh Flow
+Client sends POST /api/auth/refresh with cookie
+Server validates Refresh Token signature + checks blacklist
+Issues new Access Token; optionally rotates Refresh Token
+
+01.3 Security Controls
+Control
+Implementation
+Protects Against
+Password Hashing
+bcrypt with cost factor 12
+Credential theft
+Rate Limiting
+5 attempts / 15 min lockout (Redis counter)
+Brute force
+Token Blacklist
+Redis SET with TTL matching token expiry
+Token replay attacks
+HTTPS Enforcement
+HSTS headers + TLS 1.3 only
+MITM attacks
+Input Sanitization
+Joi schema validation on all auth inputs
+Injection attacks
+CSRF Protection
+Double-submit cookie pattern on state-changing ops
+CSRF attacks
+
+
+MODULE 02 — USER & PROFILE MANAGEMENT
+
+Module 02: User & Profile Management
+This module manages the identity records of all platform users across all roles. Each role may have an extended profile (e.g., Organizers have a business profile, Vendors have a booth profile).
+
+02.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+USR-01
+Profile Creation
+Auto-created on registration with default values
+P0
+USR-02
+Profile Update
+User edits name, avatar, contact info, bio
+P0
+USR-03
+Organizer Business Profile
+Legal name, logo, website, social links, bank details
+P0
+USR-04
+Vendor Business Profile
+Business name, category, GST/VAT, product types
+P0
+USR-05
+Avatar Upload
+Image upload with S3 storage; auto-resize to 256x256
+P1
+USR-06
+Notification Preferences
+Per-channel opt-in/out (email, SMS, push)
+P1
+USR-07
+Account Deactivation
+Soft delete; data retained for 90 days per GDPR
+P1
+USR-08
+Admin User Management
+Super Admin can search, filter, suspend, delete users
+P0
+USR-09
+Organizer Verification
+Document upload → Admin review → Verified badge
+P1
+USR-10
+Activity History
+Timeline of bookings, reviews, events created
+P2
+
+02.2 Profile Data Schema
+Field
+Type
+Role
+Notes
+user_id
+UUID
+All
+Primary key, immutable
+email
+String
+All
+Unique, verified via OTP
+phone
+String
+All
+Optional, E.164 format
+full_name
+String
+All
+Max 100 chars
+avatar_url
+String
+All
+S3 signed URL
+role
+Enum
+All
+SUPER_ADMIN | ORGANIZER | VENDOR | STAFF | ATTENDEE
+is_verified
+Boolean
+Organizer
+Admin-verified business
+business_name
+String
+Organizer/Vendor
+Legal business name
+tax_id
+String
+Organizer/Vendor
+Encrypted at rest
+bank_account
+JSON
+Organizer
+Encrypted; for payout
+
+
+MODULE 03 — EVENT MANAGEMENT
+
+Module 03: Event Management
+The Event Management module is the foundational module of the platform. It handles the full lifecycle of an event from draft creation through to archival, supporting physical, virtual, and hybrid event formats.
+
+03.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+EVT-01
+Event Creation
+Multi-step wizard: details, location, tickets, publishing settings
+P0
+EVT-02
+Event Types
+Public, Private (invite link), Invite-Only (allowlist)
+P0
+EVT-03
+Event Formats
+Physical (venue + map), Online (stream URL), Hybrid
+P0
+EVT-04
+Event Lifecycle
+Draft > Pending Approval > Published > Live > Completed > Archived
+P0
+EVT-05
+Event Duplication
+Clone an existing event with all settings for repeat events
+P1
+EVT-06
+Media Upload
+Banner, gallery images, promo video (YouTube/Vimeo embed)
+P1
+EVT-07
+Event Capacity
+Set total capacity; auto-close sales when sold out
+P0
+EVT-08
+Co-Organizers
+Invite additional organizers to co-manage an event
+P2
+EVT-09
+Event Cancellation
+Organizer or Admin cancel; triggers refund workflow
+P0
+EVT-10
+Event Postponement
+Reschedule with attendee notification and re-confirmation
+P1
+EVT-11
+Featured Events
+Admin marks events as featured for homepage promotion
+P2
+EVT-12
+Event Tags & Categories
+Taxonomy system: Category + up to 10 tags for search
+P0
+EVT-13
+Waitlist
+When sold out, users join waitlist and are auto-notified on availability
+P1
+EVT-14
+Age Restriction
+18+ events require DOB verification during booking
+P1
+EVT-15
+Recurring Events
+Daily/Weekly/Monthly recurrence with individual instance management
+P2
+
+03.2 Event Lifecycle State Machine
+State
+Entry Condition
+Exit Conditions
+Actions Available
+DRAFT
+Organizer creates event
+Submit for review / Delete
+Edit all fields, save
+PENDING_REVIEW
+Organizer submits
+Approve / Reject by Admin
+Admin review, comment
+PUBLISHED
+Admin approves (or auto-publish enabled)
+Event start time / Cancelled
+Edit limited fields, promote
+LIVE
+Event start time reached
+Event end time / Cancelled
+Check-in, real-time updates
+COMPLETED
+Event end time passed
+Archive (auto after 30 days)
+View analytics, export data
+CANCELLED
+Organizer/Admin cancels
+Terminal state
+Trigger refunds, notify attendees
+ARCHIVED
+30 days post-completion
+Terminal state
+Read-only access
+
+03.3 Event Data Model
+Field
+Type
+Description
+event_id
+UUID
+Primary key
+organizer_id
+UUID FK
+References User (Organizer role)
+title
+String(200)
+Event name
+slug
+String
+URL-friendly unique identifier
+description
+RichText
+HTML/Markdown long description
+category_id
+UUID FK
+Event category
+tags
+Array<String>
+Up to 10 tags
+type
+Enum
+PUBLIC | PRIVATE | INVITE_ONLY
+format
+Enum
+PHYSICAL | ONLINE | HYBRID
+status
+Enum
+DRAFT | PENDING_REVIEW | PUBLISHED | LIVE | COMPLETED | CANCELLED | ARCHIVED
+start_datetime
+Timestamp
+UTC start time
+end_datetime
+Timestamp
+UTC end time
+timezone
+String
+IANA timezone identifier
+venue_name
+String
+Physical venue name
+venue_address
+JSON
+street, city, state, country, postal_code
+geo_coordinates
+Point
+lat/lng for map display
+stream_url
+String
+Online event stream link (encrypted)
+capacity
+Integer
+Max attendees (0 = unlimited)
+banner_url
+String
+S3 image URL
+gallery_urls
+Array<String>
+Up to 10 images
+is_featured
+Boolean
+Admin-promoted event
+age_restriction
+Integer
+Minimum age (0 = none)
+created_at
+Timestamp
+Record creation time
+updated_at
+Timestamp
+Last modification time
+
+
+MODULE 04 — TICKETING SYSTEM
+
+Module 04: Ticketing System
+The Ticketing System enables Organizers to create sophisticated, multi-tier ticket offerings with dynamic pricing rules, coupon codes, and time-sensitive availability windows. It is the revenue engine of the platform.
+
+04.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+TKT-01
+Ticket Tier Creation
+Organizer creates multiple ticket types per event (Free, Standard, VIP, VVIP)
+P0
+TKT-02
+Per-Tier Pricing
+Fixed price per tier; supports multi-currency
+P0
+TKT-03
+Early Bird Pricing
+Auto-reduced price until a set date or quantity sold
+P0
+TKT-04
+Last Minute Pricing
+Price increase in final hours/days before event
+P1
+TKT-05
+Group Pricing
+Discounted rate when purchasing 5+ tickets of same tier
+P1
+TKT-06
+Availability Window
+Set sale_start and sale_end datetimes per tier
+P0
+TKT-07
+Per-Tier Capacity
+Independent capacity limits per ticket type
+P0
+TKT-08
+Hidden Tickets
+Staff-only or secret link tickets not visible on public listing
+P1
+TKT-09
+Coupon / Promo Codes
+Percentage or fixed discount, usage limits, expiry dates
+P0
+TKT-10
+Bulk Coupon Generation
+Generate 100s of unique codes for corporate sponsors
+P2
+TKT-11
+QR Code E-Ticket
+Unique QR code per ticket issued post-payment
+P0
+TKT-12
+Ticket Transfer
+Attendee can transfer ticket to another registered user
+P1
+TKT-13
+Complimentary Tickets
+Organizer issues free tickets bypassing payment
+P1
+TKT-14
+Ticket Add-Ons
+Optional extras: parking, merchandise, meal (separate line items)
+P2
+TKT-15
+PDF Ticket Download
+Branded PDF ticket with event details, QR, and map link
+P0
+
+04.2 Ticket Tier Schema
+Field
+Type
+Description
+tier_id
+UUID
+Primary key
+event_id
+UUID FK
+Parent event
+name
+String
+e.g. General Admission, VIP
+description
+Text
+What's included in this tier
+price
+Decimal(10,2)
+Base price in event currency
+currency
+ISO 4217
+e.g. USD, BDT, EUR
+capacity
+Integer
+Max tickets in this tier
+sold_count
+Integer
+Auto-incremented on confirmed purchase
+sale_start
+Timestamp
+When this tier goes on sale
+sale_end
+Timestamp
+When this tier stops selling
+early_bird_price
+Decimal
+Reduced price (null if not applicable)
+early_bird_until
+Timestamp
+Deadline for early bird pricing
+min_per_order
+Integer
+Min tickets per transaction (default 1)
+max_per_order
+Integer
+Max tickets per transaction (default 10)
+is_hidden
+Boolean
+Hidden from public listing
+type
+Enum
+FREE | PAID | DONATION
+
+04.3 Coupon System
+Field
+Type
+Description
+coupon_id
+UUID
+Primary key
+event_id
+UUID FK
+Scoped to event (or global if null)
+code
+String
+Unique alphanumeric code
+discount_type
+Enum
+PERCENTAGE | FIXED_AMOUNT
+discount_value
+Decimal
+e.g. 20 (for 20% or $20)
+max_uses
+Integer
+Total redemption limit
+uses_count
+Integer
+Current redemption count
+per_user_limit
+Integer
+Max uses per single user account
+min_order_amount
+Decimal
+Minimum cart value to apply coupon
+valid_from
+Timestamp
+Coupon activation date
+valid_until
+Timestamp
+Coupon expiry date
+applicable_tiers
+Array<UUID>
+Restrict to specific ticket tiers (empty = all)
+
+
+MODULE 05 — SEAT BOOKING ENGINE
+
+Module 05: Seat Booking Engine
+The Seat Booking Engine is the most technically critical module of the platform. It must guarantee zero double-bookings across thousands of concurrent users attempting to select the same seat simultaneously, using a Redis-based distributed locking strategy.
+
+
+Critical System Note
+This module uses Redis SETNX for atomic seat locking. The lock TTL is 5 minutes. If payment is not completed within this window, the lock is auto-released and the seat becomes available again.
+
+05.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+SEAT-01
+Venue Layout Builder
+Drag-and-drop seat map editor for Organizers (rows, sections, numbered seats)
+P0
+SEAT-02
+Seat Categories
+Assign seat zones to ticket tiers (e.g., Row A-C = VIP)
+P0
+SEAT-03
+Visual Seat Selector
+Interactive SVG seat map for attendee selection
+P0
+SEAT-04
+Real-Time Availability
+WebSocket pushes seat state changes (available/locked/booked) instantly
+P0
+SEAT-05
+Distributed Seat Locking
+Redis SETNX lock prevents concurrent double-selection
+P0 Critical
+SEAT-06
+Lock TTL Auto-Release
+Seats locked >5 min without payment are auto-released
+P0 Critical
+SEAT-07
+Multi-Seat Selection
+Attendee selects up to max_per_order seats in one transaction
+P0
+SEAT-08
+Companion Seating
+Algorithm suggests adjacent seats when selecting multiple seats
+P1
+SEAT-09
+Accessibility Seats
+Mark seats as wheelchair-accessible; shown with distinct icon
+P1
+SEAT-10
+Reserved Seats
+Organizer can hold seats for press, sponsors, VIPs
+P1
+SEAT-11
+Seat Swap
+Post-booking seat change (if alternative available, subject to diff)
+P2
+SEAT-12
+Check-In Tracking
+Mark seat as physically occupied during event for capacity monitoring
+P0
+
+05.2 Seat Lock Lifecycle
+State
+Description
+Duration
+Redis Key
+AVAILABLE
+Seat is free for selection
+Until selected
+Not present
+LOCKED
+User has selected but not paid
+5 min TTL
+seat:{event_id}:{seat_id}
+RESERVED
+Admin hold; no public booking
+Indefinite
+seat:reserved:{seat_id}
+BOOKED
+Payment confirmed; permanently taken
+Until cancelled
+seat:booked:{seat_id}
+RELEASED
+Lock expired; returned to AVAILABLE
+Instant transition
+Key deleted
+
+05.3 Concurrency Control Flow
+User A selects Seat S-12 → API receives request
+System executes: SETNX seat:{event_id}:S-12 {user_A_session_id} EX 300
+Redis returns 1 (success) → seat is locked for User A
+User B simultaneously selects Seat S-12 → same SETNX command
+Redis returns 0 (key exists) → User B receives 'Seat Unavailable' response
+User A completes payment within 5 min → seat state set to BOOKED in DB
+Redis lock key updated to permanent booking record
+If User A abandons: TTL expires → key deleted → seat returns to AVAILABLE
+WebSocket broadcasts state change to all connected clients in real time
+
+05.4 Seat Data Schema
+Field
+Type
+Description
+seat_id
+UUID
+Primary key
+event_id
+UUID FK
+Parent event
+venue_layout_id
+UUID FK
+Venue map version
+section
+String
+e.g. A, B, VIP
+row
+String
+e.g. 1, 2, Front
+number
+String
+Seat number within row
+tier_id
+UUID FK
+Associated ticket tier
+status
+Enum
+AVAILABLE | LOCKED | RESERVED | BOOKED
+is_accessible
+Boolean
+Wheelchair accessible
+x_coordinate
+Float
+SVG x position in layout
+y_coordinate
+Float
+SVG y position in layout
+booked_by
+UUID FK
+Attendee user_id (null if available)
+order_id
+UUID FK
+Confirmed order reference
+
+
+MODULE 06 — ORDER MANAGEMENT
+
+Module 06: Order Management
+The Order module bridges the ticketing/seat selection and payment systems. Every ticket purchase creates an Order record that serves as the central ledger entry for the transaction. Orders have a full state machine supporting complex fulfillment and cancellation flows.
+
+06.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+ORD-01
+Order Creation
+Auto-created on ticket/seat selection with PENDING status
+P0
+ORD-02
+Order Items
+Each ticket tier + quantity is a line item with unit price and subtotal
+P0
+ORD-03
+Coupon Application
+Apply coupon code at order level; discount reflected in total
+P0
+ORD-04
+Tax Calculation
+Configurable tax rates by region (VAT, GST, etc.)
+P1
+ORD-05
+Service Fee
+Optional platform service fee (fixed or % of order total)
+P1
+ORD-06
+Order Expiry
+PENDING orders auto-expire in 10 minutes if unpaid
+P0 Critical
+ORD-07
+Order Confirmation
+Email + in-app confirmation with e-ticket on payment success
+P0
+ORD-08
+Order History
+Attendee views all orders with status, event details, and tickets
+P0
+ORD-09
+Invoice Generation
+PDF invoice with order breakdown, tax, and QR code
+P1
+ORD-10
+Order Cancellation
+Attendee-initiated cancellation; triggers refund per policy
+P0
+ORD-11
+Admin Order Management
+Admin can view, modify, or cancel any order
+P0
+ORD-12
+Export Orders
+Organizer exports order data as CSV or Excel
+P1
+
+06.2 Order State Machine
+State
+Trigger
+Next States
+Time Limit
+PENDING
+Ticket/seat selected
+PROCESSING, EXPIRED
+10 minutes
+PROCESSING
+User initiates payment
+COMPLETED, FAILED
+Payment gateway timeout
+COMPLETED
+Payment webhook confirms success
+REFUND_REQUESTED
+N/A
+FAILED
+Payment declined/timeout
+PENDING (retry)
+—
+EXPIRED
+10 min timer fires without payment
+Terminal
+—
+REFUND_REQUESTED
+Attendee submits cancellation
+REFUNDED, REFUND_REJECTED
+48 hours admin SLA
+REFUNDED
+Refund processed by payment gateway
+Terminal
+—
+REFUND_REJECTED
+Admin rejects (outside policy)
+Terminal
+—
+
+06.3 Order Data Schema
+Field
+Type
+Description
+order_id
+UUID
+Primary key
+attendee_id
+UUID FK
+Purchasing user
+event_id
+UUID FK
+Event being booked
+status
+Enum
+See state machine above
+items
+Array<OrderItem>
+Line items (tier_id, quantity, unit_price)
+subtotal
+Decimal(10,2)
+Sum of line items before discounts
+coupon_id
+UUID FK
+Applied coupon (nullable)
+discount_amount
+Decimal(10,2)
+Total coupon discount
+tax_amount
+Decimal(10,2)
+Calculated tax
+service_fee
+Decimal(10,2)
+Platform fee
+total_amount
+Decimal(10,2)
+Final charge to customer
+currency
+ISO 4217
+Transaction currency
+payment_id
+UUID FK
+Payment gateway transaction reference
+expires_at
+Timestamp
+Auto-expire time for PENDING orders
+created_at
+Timestamp
+Order creation time
+
+
+MODULE 07 — PAYMENT & REFUND SYSTEM
+
+Module 07: Payment & Refund System
+The Payment module is a critical-path system handling all monetary transactions. It integrates with Stripe (international) and SSLCommerz (Bangladesh region), managing payment initiation, webhook processing, idempotent retries, and automated refunds with a full audit trail.
+
+
+Idempotency Guarantee
+All payment operations use idempotency keys to prevent duplicate charges in case of network failures or retries. Every payment attempt is logged with its full request/response payload.
+
+07.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+PAY-01
+Multi-Gateway Support
+Stripe (card, Apple Pay, Google Pay) + SSLCommerz (mobile banking, cards)
+P0
+PAY-02
+Payment Intent Creation
+Server-side payment intent; no raw card data touches our servers
+P0 Critical
+PAY-03
+Webhook Handler
+Signed webhook endpoint processes payment.success, payment.failed events
+P0 Critical
+PAY-04
+Idempotent Processing
+Duplicate webhook events detected and skipped via idempotency key
+P0
+PAY-05
+Automatic Retry
+Failed payments can be retried up to 3 times within 10-min window
+P1
+PAY-06
+Partial Payment
+Support split payment for group orders (future phase)
+P3
+PAY-07
+Organizer Payout
+Weekly/monthly automatic payout to Organizer bank account via Stripe Connect
+P0
+PAY-08
+Platform Fee Split
+Configurable platform commission deducted before organizer payout
+P0
+PAY-09
+Full Refund
+100% refund initiated via gateway API; 3-7 business days to card
+P0
+PAY-10
+Partial Refund
+Admin can refund specific line items or a custom amount
+P1
+PAY-11
+Refund Policy Engine
+Configurable per-event refund windows (e.g., no refund within 24hr)
+P1
+PAY-12
+Transaction Log
+Immutable ledger of all transactions with gateway response payloads
+P0
+PAY-13
+Payment Dashboard
+Organizer sees revenue breakdown, pending payouts, refund history
+P0
+PAY-14
+Currency Conversion
+Display in user's local currency; settle in event's base currency
+P2
+
+07.2 Payment Flow
+Successful Payment Flow
+Order created in PENDING state → client requests payment intent
+Server creates Stripe PaymentIntent with amount, currency, metadata (order_id)
+Client receives client_secret → Stripe.js completes card entry client-side
+Stripe processes payment → sends signed webhook to /api/webhooks/stripe
+Webhook handler verifies Stripe-Signature header
+Handler looks up order_id from metadata → updates Order to COMPLETED
+Seat records updated to BOOKED; tickets generated with QR codes
+Confirmation email triggered via Notification module
+
+07.3 Refund Policy Configuration
+Policy Window
+Refund %
+Admin Override
+Notes
+> 7 days before event
+100%
+Yes
+Full refund, platform fee non-refundable
+3-7 days before event
+75%
+Yes
+Partial refund
+24-72 hours before event
+50%
+Yes
+Strict policy
+< 24 hours before event
+0%
+Yes (case-by-case)
+No-refund zone
+Post event
+0%
+Admin only
+Emergency refunds only
+
+
+MODULE 08 — NOTIFICATION SYSTEM
+
+Module 08: Notification System
+The Notification module handles all outbound communications across email, SMS, and push notification channels. It uses a queue-based architecture to ensure delivery reliability and prevent blocking the main booking flow.
+
+08.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+NOTIF-01
+Email Notifications
+Transactional emails via SendGrid/AWS SES with branded templates
+P0
+NOTIF-02
+SMS Notifications
+Critical alerts via Twilio (booking confirm, event reminder)
+P1
+NOTIF-03
+In-App Notifications
+Real-time bell icon notifications within the platform
+P0
+NOTIF-04
+Push Notifications
+Mobile PWA push via Firebase Cloud Messaging
+P2
+NOTIF-05
+Booking Confirmation
+Immediate email + QR code attachment on order completion
+P0
+NOTIF-06
+Event Reminder
+Automated reminders: 7 days, 1 day, 2 hours before event
+P0
+NOTIF-07
+Cancellation Alert
+Immediate multi-channel alert on event or ticket cancellation
+P0
+NOTIF-08
+Refund Update
+Email when refund is initiated and when it completes
+P0
+NOTIF-09
+Waitlist Notification
+Alert when a spot opens for a waitlisted user
+P1
+NOTIF-10
+Vendor Application Update
+Email to vendor on application approval/rejection
+P0
+NOTIF-11
+Broadcast Message
+Organizer sends custom message to all event attendees
+P1
+NOTIF-12
+Preference Management
+User opts in/out per notification type and channel
+P1
+NOTIF-13
+Delivery Tracking
+Log sent/delivered/failed status per notification
+P1
+NOTIF-14
+Template Editor
+Admin edits email templates with variable substitution
+P2
+
+08.2 Notification Trigger Matrix
+Event
+Email
+SMS
+In-App
+Push
+Booking Confirmed
+Yes
+Yes
+Yes
+Yes
+Booking Failed
+Yes
+No
+Yes
+No
+Ticket Transferred
+Yes
+No
+Yes
+No
+Event Reminder (7d, 1d, 2h)
+Yes
+Yes (1d only)
+Yes
+Yes
+Event Cancelled
+Yes
+Yes
+Yes
+Yes
+Event Postponed
+Yes
+No
+Yes
+Yes
+Refund Initiated
+Yes
+No
+Yes
+No
+Refund Completed
+Yes
+No
+Yes
+No
+Waitlist Opened
+Yes
+No
+Yes
+Yes
+Vendor Approved
+Yes
+No
+Yes
+No
+Organizer Payout
+Yes
+No
+Yes
+No
+
+
+MODULE 09 — REAL-TIME SYSTEM
+
+Module 09: Real-Time System
+The Real-Time module enables live data synchronization across all connected clients using WebSockets (via Socket.io). This powers the live seat map, live ticket availability counts, and organizer dashboard live updates without page refreshes.
+
+09.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+RT-01
+WebSocket Connection
+Persistent WS connection per client; JWT-authenticated
+P0
+RT-02
+Event Room Isolation
+Each event is a Socket.io room; updates scoped to room members
+P0
+RT-03
+Live Seat Status
+Seat state changes broadcast to all users viewing the seat map
+P0 Critical
+RT-04
+Live Ticket Counter
+Remaining ticket count updates in real time on event page
+P0
+RT-05
+Dashboard Live Stats
+Organizer dashboard shows live sales, check-in count, revenue
+P1
+RT-06
+Check-In Live Feed
+Staff check-in screen shows live feed of attendees being admitted
+P1
+RT-07
+Connection Fallback
+Graceful degradation to polling (5-sec intervals) if WS unavailable
+P1
+RT-08
+Presence Indicators
+Show count of users currently viewing a seat map
+P2
+RT-09
+Admin Live Monitor
+Super Admin sees platform-wide live metrics (active users, TPS)
+P2
+
+09.2 WebSocket Event Taxonomy
+Event Name
+Direction
+Payload
+Triggered By
+seat:locked
+Server → Client
+{seat_id, status: 'LOCKED'}
+User selects seat
+seat:released
+Server → Client
+{seat_id, status: 'AVAILABLE'}
+Lock TTL expires
+seat:booked
+Server → Client
+{seat_id, status: 'BOOKED'}
+Payment confirmed
+ticket:count_update
+Server → Client
+{tier_id, remaining}
+Ticket sold or lock placed
+checkin:update
+Server → Client
+{attendee_id, timestamp}
+Staff scans QR code
+order:status
+Server → Client (1:1)
+{order_id, status}
+Order state change
+join:event_room
+Client → Server
+{event_id, jwt_token}
+User opens event page
+leave:event_room
+Client → Server
+{event_id}
+User navigates away
+
+
+MODULE 10 — ANALYTICS & REPORTING
+
+Module 10: Analytics & Reporting
+The Analytics module provides actionable insights to Organizers and Admins through pre-built dashboards and exportable reports. Data is aggregated asynchronously to avoid impacting real-time system performance.
+
+10.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+ANL-01
+Revenue Dashboard
+Total revenue, net revenue after fees, daily/weekly trend charts
+P0
+ANL-02
+Tickets Sold Summary
+Breakdown by tier, date, and coupon code
+P0
+ANL-03
+Conversion Funnel
+Track: Event views → Ticket selections → Orders → Completed payments
+P1
+ANL-04
+Attendee Demographics
+Geographic distribution, device types, new vs returning
+P1
+ANL-05
+Check-In Analytics
+Real-time and post-event check-in rate by session and time
+P1
+ANL-06
+Refund Analysis
+Refund rate, refund reasons, cancelled order value
+P1
+ANL-07
+Traffic Sources
+UTM parameter tracking for marketing attribution
+P2
+ANL-08
+Coupon Performance
+Usage rate, revenue impact, and ROI per coupon code
+P1
+ANL-09
+Vendor Analytics
+Booth traffic, vendor sales data (if POS integrated)
+P2
+ANL-10
+Platform Analytics
+Super Admin: total events, GMV, MRR, churn, new organizers
+P0
+ANL-11
+Scheduled Reports
+Auto-email PDF/CSV reports to Organizer daily/weekly/post-event
+P2
+ANL-12
+Custom Date Range
+All dashboards support custom date range filtering
+P0
+ANL-13
+Data Export
+Export any dataset as CSV, Excel, or PDF
+P0
+
+10.2 Key Metrics Definitions
+Metric
+Formula
+Dashboard
+Gross Revenue
+SUM(order.total_amount) WHERE status = COMPLETED
+Organizer + Admin
+Net Revenue
+Gross Revenue - Refunds - Platform Fees
+Organizer + Admin
+Conversion Rate
+(Completed Orders / Event Page Views) × 100
+Organizer
+Occupancy Rate
+(Booked Seats / Total Capacity) × 100
+Organizer
+Check-In Rate
+(Checked-in Attendees / Booked Attendees) × 100
+Organizer + Staff
+Refund Rate
+(Refunded Orders / Completed Orders) × 100
+Organizer + Admin
+Average Order Value
+Gross Revenue / Count(Completed Orders)
+Organizer + Admin
+Platform GMV
+SUM of all Gross Revenue across all events
+Admin only
+MRR
+Monthly Recurring Revenue from subscriptions
+Admin only
+
+
+MODULE 11 — VENDOR MANAGEMENT
+
+Module 11: Vendor Management
+The Vendor module enables businesses to discover events with open vendor calls, apply for booth space, manage their booth profile, and operate within the event ecosystem alongside the Organizer.
+
+11.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+VND-01
+Vendor Call Listing
+Organizer publishes open vendor call with requirements, fees, and deadline
+P0
+VND-02
+Vendor Application
+Vendor submits application with business details, booth requirements, portfolio
+P0
+VND-03
+Application Review
+Organizer reviews applications with approve/reject/waitlist actions
+P0
+VND-04
+Booth Assignment
+Organizer assigns physical booth location from venue floor plan
+P1
+VND-05
+Booth Profile Page
+Public-facing vendor booth page within the event listing
+P1
+VND-06
+Vendor Dashboard
+Vendor sees application status, booth details, event schedule
+P0
+VND-07
+Vendor Fee Collection
+Booth rental fee collected via platform payment system
+P1
+VND-08
+Document Management
+Vendor uploads insurance, licenses; Organizer verifies
+P1
+VND-09
+Vendor Messaging
+In-platform messaging between Vendor and Organizer
+P1
+VND-10
+Multi-Event Vendor
+Vendor can apply to multiple events simultaneously
+P0
+VND-11
+Vendor Rating
+Attendees rate vendors post-event; Organizer uses history for vetting
+P2
+VND-12
+Booth Map Display
+Interactive floor plan showing all vendor booths to attendees
+P2
+
+11.2 Vendor Application Lifecycle
+State
+Description
+Actor
+Notification
+DRAFT
+Vendor saves incomplete application
+Vendor
+None
+SUBMITTED
+Vendor submits complete application
+Vendor
+Email to Organizer
+UNDER_REVIEW
+Organizer is actively reviewing
+Organizer
+Email to Vendor
+APPROVED
+Application accepted
+Organizer
+Email + SMS to Vendor
+WAITLISTED
+Held pending space availability
+Organizer
+Email to Vendor
+REJECTED
+Application declined (reason provided)
+Organizer
+Email to Vendor
+BOOTH_ASSIGNED
+Physical booth location confirmed
+Organizer
+Email to Vendor
+WITHDRAWN
+Vendor withdraws application
+Vendor
+Email to Organizer
+
+
+MODULE 12 — REVIEW & FEEDBACK SYSTEM
+
+Module 12: Review & Feedback System
+The Review module enables attendees to submit structured feedback and ratings post-event. Reviews feed into the Organizer's public reputation score, influencing future attendee trust and search ranking.
+
+12.1 Feature List
+Feature ID
+Feature Name
+Description
+Priority
+REV-01
+Star Rating
+1–5 star overall rating; mandatory for submission
+P0
+REV-02
+Aspect Ratings
+Sub-ratings: Organization, Venue, Value for Money, Content Quality
+P1
+REV-03
+Text Review
+Free-text feedback (min 20, max 1000 characters)
+P0
+REV-04
+Photo Upload
+Attach up to 5 photos to review (S3 storage)
+P2
+REV-05
+Verified Attendee Only
+Review gated behind confirmed booking for the event
+P0
+REV-06
+One Review Per Event
+Single review per attendee per event (editable within 7 days)
+P0
+REV-07
+Organizer Response
+Organizer can post a single public response to any review
+P1
+REV-08
+Review Moderation
+Admin can flag and remove reviews violating community guidelines
+P1
+REV-09
+Aggregate Score
+Organizer profile shows weighted average score across all events
+P0
+REV-10
+Review Sorting
+Sort reviews by: Most Recent, Highest Rating, Most Helpful
+P1
+REV-11
+Helpful Votes
+Other attendees mark reviews as helpful (thumbs up)
+P2
+REV-12
+Review Reminder
+Automated email 24h after event ends prompting review submission
+P1
+
+
+SECTION 4 — CROSS-CUTTING CONCERNS
+
+4. Search & Discovery
+The Search module provides a fast, full-text search experience across all public events with rich filtering capabilities.
+
+4.1 Search Features
+Feature
+Description
+Implementation
+Full-Text Search
+Search by event title, description, organizer name, tags
+Elasticsearch / MeiliSearch
+Category Filter
+Filter by event category (Music, Tech, Sports, Food, etc.)
+Faceted search
+Date Range Filter
+Filter by upcoming, this week, this month, custom range
+Date range query
+Location Filter
+Filter by city, country, or radius from current location
+Geo-distance query
+Price Filter
+Free only, price range (min-max)
+Numeric range filter
+Format Filter
+Physical, Online, Hybrid
+Enum filter
+Availability Filter
+Show only events with tickets available
+Computed field
+Sort Options
+Relevance, Date (soonest), Price (low/high), Popularity
+Sort parameter
+Autocomplete
+Suggest event names as user types (debounced 300ms)
+Prefix search
+Saved Searches
+Attendee saves search query with alert for new matching events
+Persisted query + notification
+
+
+5. Session & Agenda System
+For multi-track or multi-day events, the Session module provides a structured schedule management system.
+
+Feature ID
+Feature
+Description
+SES-01
+Session Creation
+Organizer creates sessions with title, description, start/end time, location/room
+SES-02
+Multi-Track Support
+Multiple simultaneous sessions (Track A, Track B) displayed in agenda grid
+SES-03
+Speaker Profiles
+Speaker bio, photo, title, social links attached to sessions
+SES-04
+Session Types
+Keynote, Workshop, Panel, Networking, Break
+SES-05
+Attendee Schedule
+Attendee marks sessions of interest; personal agenda generated
+SES-06
+Session Capacity
+Optional per-session seat limit with booking required
+SES-07
+Live Session Link
+Online stream URL per session for hybrid events
+SES-08
+Session Reminders
+15-min before reminder notification for scheduled sessions
+SES-09
+Agenda Export
+Export full agenda as PDF or iCalendar (.ics) file
+
+
+SECTION 5 — NON-FUNCTIONAL REQUIREMENTS
+
+6. Non-Functional Requirements
+
+6.1 Performance
+Metric
+Target
+Measurement Method
+API Response Time (p50)
+< 100ms
+APM (Datadog/New Relic)
+API Response Time (p95)
+< 300ms
+APM percentile tracking
+Seat Lock Operation
+< 50ms
+Redis operation latency
+WebSocket Latency
+< 100ms end-to-end
+Client-side ping measurement
+Concurrent Users
+1,000+
+Load testing (k6 / Artillery)
+Database Query (p95)
+< 50ms
+Query analyzer + indexes
+Email Delivery
+< 30 seconds
+SendGrid delivery webhook
+
+6.2 Security Requirements
+Category
+Requirement
+Standard / Reference
+Authentication
+JWT RS256 signing; tokens stored in memory (not localStorage)
+OWASP A07
+Password
+bcrypt cost 12; complexity requirements enforced
+NIST SP 800-63B
+Data Encryption
+AES-256 at rest for PII; TLS 1.3 in transit
+PCI DSS Req. 3 & 4
+Payment
+PCI DSS SAQ A compliant; no raw card data on servers
+PCI DSS
+GDPR
+Data export, right to erasure, consent management
+GDPR Art. 17, 20
+Rate Limiting
+Per-IP and per-user rate limits on all public endpoints
+OWASP A04
+Input Validation
+Schema validation on 100% of API inputs (Joi/Zod)
+OWASP A03
+Audit Logging
+Immutable logs for all data-modifying operations
+SOC 2 CC7.2
+Dependency Scanning
+Weekly automated scan for CVEs in dependencies
+OWASP A06
+
+6.3 Scalability Architecture
+Layer
+Technology
+Scaling Strategy
+API Server
+Node.js / NestJS
+Horizontal scaling behind load balancer; stateless
+Database
+MongoDB / PostgreSQL
+Read replicas; connection pooling (PgBouncer)
+Cache
+Redis Cluster
+Redis Sentinel for HA; separate cache and queue instances
+Queue
+Bull (Redis-backed)
+Worker autoscaling based on queue depth
+File Storage
+AWS S3 / Cloudflare R2
+CDN-backed; signed URL access
+Search
+Elasticsearch
+Multi-shard cluster; index replication
+WebSocket
+Socket.io + Redis Adapter
+Sticky sessions + Redis pub/sub for multi-instance
+Email
+SendGrid / AWS SES
+External managed service; no in-house SMTP
+
+
+SECTION 6 — EDGE CASES & ERROR HANDLING
+
+7. Critical Edge Cases
+
+Edge Case
+Risk
+Mitigation Strategy
+Double booking (concurrent purchase)
+Critical — same seat booked twice
+Redis SETNX atomic lock; DB unique constraint as backstop
+Payment success, DB write fails
+High — payment charged, no ticket issued
+Webhook retry with idempotency key; reconciliation job
+Seat lock expires during checkout
+Medium — user loses seat mid-payment
+Real-time WS notification; grace period extension option
+Event cancelled after tickets sold
+High — revenue impact + attendee trust
+Auto-refund trigger; multi-channel mass notification
+Webhook received multiple times
+High — duplicate order completion
+Idempotency key check in Redis before processing
+Organizer deletes event with bookings
+High — data integrity
+Soft-delete only; prevent deletion if active orders exist
+Currency exchange rate change
+Medium — pricing inconsistency
+Lock price in order currency at order creation time
+User transfers ticket to banned user
+Medium — policy violation
+Validate transferee account status before allowing transfer
+Coupon code applied after expiry
+Low — revenue leakage
+Server-side validation at order creation; reject stale coupons
+PDF ticket QR code collision
+Low — check-in failure
+QR contains order_id + HMAC signature; verified on scan
+Organizer payout failure (bank error)
+Medium — financial
+Retry queue; admin alert; manual override payout option
+WebSocket disconnect during payment
+Medium — UX confusion
+Client reconnects and polls order status on reconnect
+
+
+SECTION 7 — DEVELOPMENT ROADMAP
+
+8. Phased Development Roadmap
+
+Phase 1 — MVP (Months 1–3)
+
+Goal
+Ship a fully functional booking platform that handles the core event → ticket → payment flow with no advanced features.
+
+Module
+Deliverable
+Acceptance Criteria
+Auth
+Email/password, JWT, role assignment
+Login/logout, role-based route protection
+User
+Basic profile create/update
+Profile page renders correct user data
+Event
+Create/edit/publish events
+Organizer can publish event visible to attendees
+Ticket
+Single tier free/paid tickets
+Attendee can browse and select tickets
+Order
+Order creation + expiry
+PENDING order auto-expires in 10 min if unpaid
+Payment
+Stripe integration + webhooks
+End-to-end payment completes; ticket issued
+Notification
+Booking confirmation email
+Email received within 60 seconds of payment
+
+Phase 2 — Growth (Months 4–6)
+
+Goal
+Add seat booking, advanced ticketing, real-time features, and basic analytics.
+
+Module
+Deliverable
+Acceptance Criteria
+Seat Engine
+Visual seat map + Redis locking
+Zero double-bookings under 100 concurrent users
+Ticket Advanced
+Multi-tier, early bird, coupons
+Coupon applies correct discount at checkout
+Notification
+SMS, reminders, broadcast
+Reminder received 24h before event
+Real-Time
+WebSocket seat map + ticket counter
+Seat state updates < 200ms on all clients
+Analytics
+Revenue dashboard + export
+Organizer sees accurate revenue breakdown
+Review
+Post-event rating system
+Review submission gated behind confirmed booking
+
+Phase 3 — Enterprise (Months 7–12)
+
+Goal
+Full vendor ecosystem, advanced search, platform admin tools, compliance, and scaling infrastructure.
+
+Module
+Deliverable
+Acceptance Criteria
+Vendor
+Application → Approval → Booth system
+Full vendor lifecycle from apply to booth map
+Session
+Multi-track agenda + speaker profiles
+Attendee can build personal schedule
+Search
+Elasticsearch full-text + geo search
+Results returned < 150ms
+Analytics
+Funnel, demographics, custom reports
+Scheduled PDF reports delivered via email
+Auth
+MFA, social OAuth, SSO
+Google login works end-to-end
+Platform
+Multi-tenant, subscription billing
+Organizer upgrades plan via self-serve
+Infrastructure
+Auto-scaling, CDN, monitoring
+Platform handles 1,000 concurrent users
+
+
+SECTION 8 — API DESIGN OVERVIEW
+
+9. REST API Design Principles
+The MVEMS API follows RESTful conventions with JSON request/response bodies, JWT Bearer token authentication, and consistent error response formatting.
+
+9.1 API Endpoint Catalogue
+Method
+Endpoint
+Description
+Auth
+POST
+/api/auth/register
+New user registration
+Public
+POST
+/api/auth/login
+Login → JWT token
+Public
+POST
+/api/auth/refresh
+Refresh access token
+Cookie
+POST
+/api/auth/logout
+Revoke refresh token
+Bearer
+GET
+/api/events
+List/search public events
+Public
+POST
+/api/events
+Create new event
+Organizer
+GET
+/api/events/:id
+Get event details
+Public
+PATCH
+/api/events/:id
+Update event
+Organizer
+DELETE
+/api/events/:id
+Soft-delete event
+Organizer/Admin
+POST
+/api/events/:id/publish
+Submit for publish
+Organizer
+GET
+/api/events/:id/tickets
+List ticket tiers
+Public
+POST
+/api/events/:id/tickets
+Create ticket tier
+Organizer
+GET
+/api/events/:id/seats
+Get seat map
+Public
+POST
+/api/seats/:id/lock
+Lock a seat
+Attendee
+POST
+/api/orders
+Create order
+Attendee
+GET
+/api/orders/:id
+Get order details
+Owner/Admin
+POST
+/api/orders/:id/cancel
+Cancel order
+Owner/Admin
+POST
+/api/payments/intent
+Create payment intent
+Attendee
+POST
+/api/webhooks/stripe
+Stripe webhook handler
+Stripe HMAC
+GET
+/api/analytics/events/:id
+Event analytics
+Organizer
+POST
+/api/vendors/apply
+Submit vendor application
+Vendor
+GET
+/api/vendors/applications
+List own applications
+Vendor
+PATCH
+/api/admin/events/:id/approve
+Approve event
+Admin
+GET
+/api/admin/users
+List all users
+Admin
+
+9.2 Standard Error Response Format
+All API errors return a consistent JSON structure:
+
+{ "success": false, "error": { "code": "SEAT_ALREADY_LOCKED", "message": "The selected seat is no longer available.", "statusCode": 409, "timestamp": "2025-01-15T10:30:00Z", "requestId": "req_abc123" } }
+
+
+APPENDIX — REFERENCE TABLES
+
+Appendix A: Technology Stack
+
+Layer
+Technology
+Purpose
+Backend
+Node.js + NestJS
+Primary API server
+Database
+PostgreSQL / MongoDB
+Relational data / Document store
+Cache
+Redis
+Seat locking, sessions, rate limiting
+Queue
+Bull + Redis
+Async job processing
+Search
+Elasticsearch / MeiliSearch
+Event search & discovery
+Real-Time
+Socket.io
+WebSocket communications
+File Storage
+AWS S3 / Cloudflare R2
+Media and document storage
+Email
+SendGrid / AWS SES
+Transactional email
+SMS
+Twilio
+SMS notifications
+Payment (International)
+Stripe
+Card processing, payouts
+Payment (BD)
+SSLCommerz
+Local payment methods
+Auth
+JWT (RS256) + bcrypt
+Identity and security
+CDN
+Cloudflare
+Static assets and DDoS protection
+Monitoring
+Datadog / New Relic
+APM and alerting
+Container
+Docker + Kubernetes
+Deployment and orchestration
+CI/CD
+GitHub Actions
+Automated test and deploy
+
+Appendix B: Glossary
+
+Term
+Definition
+RBAC
+Role-Based Access Control — permission model based on assigned roles
+JWT
+JSON Web Token — signed token used for stateless authentication
+SETNX
+Redis command: SET if Not eXists — used for atomic locking
+TTL
+Time To Live — automatic expiry timer on Redis keys
+Idempotency Key
+Unique key preventing duplicate processing of the same operation
+Webhook
+HTTP callback sent by payment gateway to notify of transaction events
+GMV
+Gross Merchandise Value — total transaction value before fees
+MRR
+Monthly Recurring Revenue — monthly subscription revenue
+PCI DSS
+Payment Card Industry Data Security Standard
+GDPR
+General Data Protection Regulation — EU data privacy law
+SLA
+Service Level Agreement — committed performance/response standards
+WS
+WebSocket — persistent full-duplex TCP connection for real-time data
+P0/P1/P2
+Priority levels: P0 = must have, P1 = should have, P2 = nice to have
+
+END OF DOCUMENT  |  Multivendor Event Management System  |  Full Feature Documentation  |  v1.0  |  2025

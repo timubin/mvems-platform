@@ -1,0 +1,364 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =======================
+// ENUMS
+// =======================
+
+enum Role {
+  SUPER_ADMIN
+  ORGANIZER
+  VENDOR
+  STAFF
+  ATTENDEE
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  LIVE
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum EventFormat {
+  PHYSICAL
+  ONLINE
+  HYBRID
+}
+
+enum TicketType {
+  FREE
+  PAID
+  DONATION
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
+  REFUND_REQUESTED
+  REFUNDED
+  REFUND_REJECTED
+}
+
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  RESERVED
+  BOOKED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum VendorAppStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  WAITLISTED
+  REJECTED
+  BOOTH_ASSIGNED
+  WITHDRAWN
+}
+
+enum SessionType {
+  KEYNOTE
+  WORKSHOP
+  PANEL
+  NETWORKING
+  BREAK
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
+// =======================
+// MODELS (PHASE 1, 2, & 3)
+// =======================
+
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  avatarUrl    String?
+  role         Role    @default(ATTENDEE)
+  isVerified   Boolean @default(false)
+
+  // Phase 3: MFA & Auth
+  mfaEnabled Boolean @default(false)
+  mfaSecret  String?
+  googleId   String? @unique
+
+  // Business Profile
+  businessName String?
+  taxId        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events        Event[]                @relation("OrganizerEvents")
+  orders        Order[]
+  seats         Seat[]                 @relation("BookedSeats")
+  reviews       Review[]
+  vendorApps    VendorApplication[]
+  booths        Booth[]
+  savedSessions EventSession[]         @relation("AttendeeSchedule")
+  subscription  OrganizerSubscription?
+}
+
+model Event {
+  id            String      @id @default(uuid())
+  organizerId   String
+  title         String
+  slug          String      @unique
+  description   String?
+  type          String      @default("PUBLIC")
+  format        EventFormat @default(PHYSICAL)
+  status        EventStatus @default(DRAFT)
+  startDatetime DateTime
+  endDatetime   DateTime
+  timezone      String      @default("UTC")
+  venueName     String?
+  capacity      Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  organizer User         @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  tickets   TicketTier[]
+  orders    Order[]
+  seats     Seat[]
+  coupons   Coupon[]
+  reviews   Review[]
+
+  // Phase 3: Ecosystem
+  vendorApps VendorApplication[]
+  booths     Booth[]
+  sessions   EventSession[]
+  speakers   Speaker[]
+}
+
+// -------------------------------------
+// Ticketing & Orders (Phase 1 & 2)
+// -------------------------------------
+
+model TicketTier {
+  id             String     @id @default(uuid())
+  eventId        String
+  name           String
+  price          Decimal    @default(0.0)
+  currency       String     @default("USD")
+  capacity       Int
+  soldCount      Int        @default(0)
+  type           TicketType @default(PAID)
+  saleStart      DateTime
+  saleEnd        DateTime
+  earlyBirdPrice Decimal?
+  earlyBirdUntil DateTime?
+
+  event      Event       @relation(fields: [eventId], references: [id])
+  orderItems OrderItem[]
+  seats      Seat[]
+}
+
+model Coupon {
+  id             String       @id @default(uuid())
+  eventId        String?
+  code           String       @unique
+  discountType   DiscountType
+  discountValue  Decimal
+  maxUses        Int          @default(0)
+  usesCount      Int          @default(0)
+  perUserLimit   Int          @default(1)
+  minOrderAmount Decimal      @default(0.0)
+  validFrom      DateTime
+  validUntil     DateTime
+
+  event  Event?  @relation(fields: [eventId], references: [id])
+  orders Order[]
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  attendeeId     String
+  eventId        String
+  couponId       String?
+  status         OrderStatus @default(PENDING)
+  subtotal       Decimal     @default(0.0)
+  discountAmount Decimal     @default(0.0)
+  taxAmount      Decimal     @default(0.0)
+  serviceFee     Decimal     @default(0.0)
+  totalAmount    Decimal     @default(0.0)
+  currency       String      @default("USD")
+  createdAt      DateTime    @default(now())
+  expiresAt      DateTime
+
+  attendee User        @relation(fields: [attendeeId], references: [id])
+  event    Event       @relation(fields: [eventId], references: [id])
+  coupon   Coupon?     @relation(fields: [couponId], references: [id])
+  items    OrderItem[]
+  seats    Seat[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  tierId    String
+  quantity  Int     @default(1)
+  unitPrice Decimal @default(0.0)
+
+  order      Order      @relation(fields: [orderId], references: [id])
+  ticketTier TicketTier @relation(fields: [tierId], references: [id])
+}
+
+model Seat {
+  id           String     @id @default(uuid())
+  eventId      String
+  tierId       String?
+  section      String?
+  row          String?
+  number       String
+  status       SeatStatus @default(AVAILABLE)
+  isAccessible Boolean    @default(false)
+  xCoordinate  Float?
+  yCoordinate  Float?
+
+  bookedById String?
+  orderId    String?
+
+  event      Event       @relation(fields: [eventId], references: [id])
+  ticketTier TicketTier? @relation(fields: [tierId], references: [id])
+  bookedBy   User?       @relation("BookedSeats", fields: [bookedById], references: [id])
+  order      Order?      @relation(fields: [orderId], references: [id])
+}
+
+model Review {
+  id                 String   @id @default(uuid())
+  eventId            String
+  attendeeId         String
+  rating             Int
+  organizationRating Int?
+  venueRating        Int?
+  valueRating        Int?
+  contentRating      Int?
+  textReview         String?  @db.Text
+  photoUrls          String[]
+  helpfulVotes       Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  event    Event @relation(fields: [eventId], references: [id])
+  attendee User  @relation(fields: [attendeeId], references: [id])
+
+  @@unique([eventId, attendeeId])
+}
+
+// -------------------------------------
+// Phase 3: Vendor Ecosystem (Module 11)
+// -------------------------------------
+
+model VendorApplication {
+  id                String          @id @default(uuid())
+  eventId           String
+  vendorId          String
+  businessName      String
+  category          String
+  boothRequirements String?         @db.Text
+  status            VendorAppStatus @default(SUBMITTED)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  event  Event @relation(fields: [eventId], references: [id])
+  vendor User  @relation(fields: [vendorId], references: [id])
+}
+
+model Booth {
+  id          String  @id @default(uuid())
+  eventId     String
+  vendorId    String?
+  name        String
+  description String? @db.Text
+  xCoordinate Float?
+  yCoordinate Float?
+  rentalFee   Decimal @default(0.0)
+  isAssigned  Boolean @default(false)
+
+  event  Event @relation(fields: [eventId], references: [id])
+  vendor User? @relation(fields: [vendorId], references: [id])
+}
+
+// -------------------------------------
+// Phase 3: Session & Agenda (Module 05.4)
+// -------------------------------------
+
+model Speaker {
+  id          String  @id @default(uuid())
+  eventId     String
+  name        String
+  title       String?
+  company     String?
+  bio         String? @db.Text
+  avatarUrl   String?
+  socialLinks Json?
+
+  event    Event          @relation(fields: [eventId], references: [id])
+  sessions EventSession[] @relation("SessionSpeakers")
+}
+
+model EventSession {
+  id           String      @id @default(uuid())
+  eventId      String
+  title        String
+  description  String?     @db.Text
+  track        String?
+  type         SessionType @default(WORKSHOP)
+  startTime    DateTime
+  endTime      DateTime
+  locationRoom String?
+  capacity     Int?
+  streamUrl    String?
+
+  event     Event     @relation(fields: [eventId], references: [id])
+  speakers  Speaker[] @relation("SessionSpeakers")
+  attendees User[]    @relation("AttendeeSchedule")
+}
+
+// -------------------------------------
+// Phase 3: Platform Subscription 
+// -------------------------------------
+
+model SubscriptionPlan {
+  id       String  @id @default(uuid())
+  name     String  @unique
+  price    Decimal
+  features Json
+
+  subscriptions OrganizerSubscription[]
+}
+
+model OrganizerSubscription {
+  id               String    @id @default(uuid())
+  organizerId      String    @unique
+  planId           String
+  status           SubStatus @default(ACTIVE)
+  currentPeriodEnd DateTime
+
+  organizer User             @relation(fields: [organizerId], references: [id])
+  plan      SubscriptionPlan @relation(fields: [planId], references: [id])
+}
