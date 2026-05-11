@@ -10,9 +10,10 @@ import { PaymentModule } from './payment/payment.module';
 import { NotificationModule } from './notification/notification.module';
 import { ReviewModule } from './review/review.module';
 import { VendorModule } from './vendor/vendor.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, EventModule, TicketModule, OrderModule, PaymentModule, NotificationModule, ReviewModule, VendorModule],
+  imports: [AuthModule, UsersModule, EventModule, TicketModule, OrderModule, PaymentModule, NotificationModule, ReviewModule, VendorModule, AnalyticsModule],
   controllers: [AppController],
   providers: [AppService],
 })
