@@ -155,6 +155,10 @@ model Event {
   booths     Booth[]
   sessions   EventSession[]
   speakers   Speaker[]
+
+  @@index([organizerId])
+  @@index([status])
+  @@index([slug])
 }
 
 // -------------------------------------
@@ -217,6 +221,10 @@ model Order {
   coupon   Coupon?     @relation(fields: [couponId], references: [id])
   items    OrderItem[]
   seats    Seat[]
+
+  @@index([attendeeId])
+  @@index([eventId])
+  @@index([status])
 }
 
 model OrderItem {
@@ -249,6 +257,9 @@ model Seat {
   ticketTier TicketTier? @relation(fields: [tierId], references: [id])
   bookedBy   User?       @relation("BookedSeats", fields: [bookedById], references: [id])
   order      Order?      @relation(fields: [orderId], references: [id])
+
+  @@index([eventId])
+  @@index([status])
 }
 
 model Review {
@@ -288,6 +299,10 @@ model VendorApplication {
 
   event  Event @relation(fields: [eventId], references: [id])
   vendor User  @relation(fields: [vendorId], references: [id])
+
+  @@index([eventId])
+  @@index([vendorId])
+  @@index([status])
 }
 
 model Booth {
