@@ -231,17 +231,17 @@ export default function LandingPage() {
                 <li><Link href="/events" className="hover:text-white transition-colors">Event Discovery</Link></li>
                 <li><Link href="/dashboard" className="hover:text-white transition-colors">Organizer Portal</Link></li>
                 <li><Link href="/vendor" className="hover:text-white transition-colors">Vendor Hub</Link></li>
-                <li><a href="#" className="hover:text-white transition-colors">Pricing Plans</a></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing Plans</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-bold mb-6">Support</h4>
               <ul className="space-y-4 text-sm text-neutral-500">
-                <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">API Reference</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Status Page</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><Link href="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
+                <li><Link href="/docs/api" className="hover:text-white transition-colors">API Reference</Link></li>
+                <li><Link href="/status" className="hover:text-white transition-colors">Status Page</Link></li>
+                <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
               </ul>
             </div>
 
