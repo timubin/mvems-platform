@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.next/
+dist/
+build/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Test Files
+backend/test-db.js
+backend/test-db.ts
+backend/test-port.js
+backend/prisma.config.ts.bak
+
+# Docker
+.dockerignore
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

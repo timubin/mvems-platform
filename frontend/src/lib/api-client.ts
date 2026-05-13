@@ -1,38 +1,45 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const apiClient = axios.create({
-  baseURL: 'http://localhost:3001',
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Global request interceptor for auth token
-apiClient.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor for adding JWT token
+apiClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error: AxiosError) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
-// Global response interceptor for error handling
+// Response interceptor for handling global errors (like 401 Unauthorized)
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Auto-logout on unauthorized
+      console.warn('Unauthorized access, logging out...');
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        // Redirect to login only if not already there
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
       }
     }
-    
-    // Custom error messaging
-    const message = error.response?.data?.message || 'Network Error: Make sure Backend is running.';
-    console.error('API Error:', message);
-    
     return Promise.reject(error);
   }
 );

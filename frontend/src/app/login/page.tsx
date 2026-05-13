@@ -3,8 +3,19 @@
 import React, { useState } from 'react';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import axios from 'axios';
+import apiClient from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
+import { AxiosError } from 'axios';
+
+interface LoginResponse {
+  accessToken: string;
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    role: string;
+  };
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,8 +30,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Connecting to our NestJS Backend (running on port 3001)
-      const response = await axios.post('http://localhost:3001/auth/login', {
+      const response = await apiClient.post<LoginResponse>('/auth/login', {
         email,
         password,
       });
@@ -33,8 +43,10 @@ export default function LoginPage() {
 
       // Redirect to Dashboard
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      router.refresh(); // Ensure layout guards pick up the new token
+    } catch (err: unknown) {
+      const axiosError = err as AxiosError<{ message: string }>;
+      setError(axiosError.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -133,9 +145,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-neutral-500 mt-8">
-          Don't have an account? <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Sign up for free</Link>
-        </p>
+        <div className="text-center text-sm text-neutral-500 mt-8">
+          Don&apos;t have an account? <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Sign up for free</Link>
+        </div>
       </div>
     </div>
   );

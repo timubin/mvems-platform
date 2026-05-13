@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 /**
@@ -13,23 +17,28 @@ export class VendorService {
    * Vendors apply for specific booth spaces at an event.
    */
   async applyForBooth(vendorId: string, boothId: string) {
-    const booth = await this.prisma.booth.findUnique({ where: { id: boothId } });
+    const booth = await this.prisma.booth.findUnique({
+      where: { id: boothId },
+    });
     if (!booth) throw new NotFoundException('Booth not found');
-    if (booth.status !== 'AVAILABLE') throw new BadRequestException('Booth is not available or already booked');
+    if (booth.isAssigned)
+      throw new BadRequestException('Booth is already assigned');
 
-    // Create the booth application
-    const application = await this.prisma.boothApplication.create({
+    // Create the vendor application
+    const application = await this.prisma.vendorApplication.create({
       data: {
-        boothId,
+        eventId: booth.eventId,
         vendorId,
-        status: 'PENDING',
-      }
+        businessName: 'Vendor Business', // Placeholder
+        category: 'Exhibitor',
+        status: 'SUBMITTED',
+      },
     });
 
-    // Mark booth as PENDING so others don't apply at the exact same time
+    // Mark booth as assigned (simplified logic for this schema)
     await this.prisma.booth.update({
       where: { id: boothId },
-      data: { status: 'PENDING' }
+      data: { isAssigned: true, vendorId },
     });
 
     return application;
@@ -38,27 +47,25 @@ export class VendorService {
   /**
    * Admin/Organizer action to process (approve or reject) a vendor application
    */
-  async processApplication(applicationId: string, action: 'APPROVED' | 'REJECTED') {
-    const app = await this.prisma.boothApplication.findUnique({ where: { id: applicationId } });
+  async processApplication(
+    applicationId: string,
+    action: 'APPROVED' | 'REJECTED',
+  ) {
+    const app = await this.prisma.vendorApplication.findUnique({
+      where: { id: applicationId },
+    });
     if (!app) throw new NotFoundException('Application not found');
 
-    await this.prisma.boothApplication.update({
+    await this.prisma.vendorApplication.update({
       where: { id: applicationId },
-      data: { status: action }
+      data: { status: action === 'APPROVED' ? 'APPROVED' : 'REJECTED' },
     });
 
     if (action === 'REJECTED') {
-      // Free up the booth for others
-      await this.prisma.booth.update({
-        where: { id: app.boothId },
-        data: { status: 'AVAILABLE', vendorId: null }
-      });
+      // Logic for rejection (maybe delete the application or just leave it as REJECTED)
     } else {
-      // Assign the vendor to the booth permanently
-      await this.prisma.booth.update({
-        where: { id: app.boothId },
-        data: { status: 'SOLD', vendorId: app.vendorId }
-      });
+      // In this schema, applications are per-event, not per-booth.
+      // Typically, an admin would assign a specific booth after approving.
     }
 
     // Note: Here we would trigger NOTIF-04 to send an email to the vendor
@@ -75,10 +82,10 @@ export class VendorService {
       where: { eventId },
       include: {
         vendor: {
-          select: { businessName: true }
-        }
+          select: { businessName: true },
+        },
       },
-      orderBy: { name: 'asc' }
+      orderBy: { name: 'asc' },
     });
   }
 
@@ -89,16 +96,17 @@ export class VendorService {
   async collectLead(vendorId: string, scannedAttendeeId: string) {
     const attendee = await this.prisma.user.findUnique({
       where: { id: scannedAttendeeId },
-      select: { id: true, fullName: true, email: true, phoneNumber: true }
+      select: { id: true, fullName: true, email: true, phone: true },
     });
 
-    if (!attendee) throw new NotFoundException('Invalid QR code / Attendee not found');
+    if (!attendee)
+      throw new NotFoundException('Invalid QR code / Attendee not found');
 
     // In a full implementation, we would save this to a `Lead` table
     // For now, returning the attendee's data simulating a successful scan
     return {
       message: 'Lead collected successfully',
-      lead: attendee
+      lead: attendee,
     };
   }
 }

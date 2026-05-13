@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Users, Search, Mail, Phone, MoreVertical } from 'lucide-react';
+import { Users, Search, MoreVertical } from 'lucide-react';
 
 export default function AttendeesPage() {
   const attendees = [

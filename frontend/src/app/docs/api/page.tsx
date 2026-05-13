@@ -1,5 +1,5 @@
 import React from 'react';
-import { Code, Terminal, Globe, Lock, ArrowLeft } from 'lucide-react';
+import { Code, Lock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ApiDocsPage() {

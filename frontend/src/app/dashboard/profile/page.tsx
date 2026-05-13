@@ -1,22 +1,40 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, ShieldCheck, MapPin, Phone, Camera, Save, Loader2 } from 'lucide-react';
+import { User, Mail, Shield, ShieldCheck, Phone, Camera, Save, Loader2 } from 'lucide-react';
+
+interface ProfileUser {
+  fullName: string;
+  email: string;
+  role: string;
+}
 
 export default function ProfilePage() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const fetchUser = () => {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser) as ProfileUser);
+        } catch (e) {
+          console.error('Failed to parse user data', e);
+        }
+      }
+      setLoading(false);
+    };
+    
+    fetchUser();
   }, []);
 
   if (loading || !user) {
-    return <div className="flex items-center justify-center h-96"><Loader2 className="animate-spin text-indigo-500" /></div>;
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="animate-spin text-indigo-500" />
+      </div>
+    );
   }
 
   return (
@@ -35,7 +53,7 @@ export default function ProfilePage() {
             <div className="relative mt-4">
               <div className="w-32 h-32 rounded-full border-4 border-neutral-950 bg-neutral-900 mx-auto overflow-hidden relative group cursor-pointer">
                 <img 
-                  src={`https://ui-avatars.com/api/?name=${user.fullName}&background=4f46e5&color=fff&size=200`} 
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=4f46e5&color=fff&size=200`} 
                   alt="Avatar" 
                   className="w-full h-full object-cover group-hover:opacity-50 transition-opacity"
                 />

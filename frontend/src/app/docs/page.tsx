@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Book, Code, Terminal, Zap, ArrowLeft, Search, CheckCircle2, Info } from 'lucide-react';
+import { Book, Code, Terminal, Zap, ArrowLeft, CheckCircle2, Info } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DocsPage() {

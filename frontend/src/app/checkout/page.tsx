@@ -1,40 +1,50 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { CreditCard, Lock, ArrowRight, Tag, Loader2, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
+import { CreditCard, Lock, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 
-export default function CheckoutPage() {
+interface CheckoutEvent {
+  id: string;
+  title: string;
+  coverImage?: string;
+  location?: string;
+}
+
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId');
   const router = useRouter();
   
-  const [event, setEvent] = useState(null);
+  const [event, setEvent] = useState<CheckoutEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    if (eventId) {
-      fetchEventDetails();
-    } else {
+  const fetchEventDetails = useCallback(async () => {
+    if (!eventId) {
       setLoading(false);
+      return;
     }
-  }, [eventId]);
-
-  const fetchEventDetails = async () => {
     try {
-      const response = await apiClient.get(`/events`);
+      const response = await apiClient.get<CheckoutEvent[]>(`/events`);
       // For demo, find the matching event or use first one
-      const found = response.data.find((e: any) => e.id === eventId) || response.data[0];
-      setEvent(found);
+      const found = response.data.find((e) => e.id === eventId) || response.data[0];
+      setEvent(found || null);
     } catch (error) {
       console.error('Error fetching event details:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchEventDetails();
+    };
+    init();
+  }, [fetchEventDetails]);
 
   const handlePayment = () => {
     setProcessing(true);
@@ -173,5 +183,13 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="h-screen bg-neutral-950 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

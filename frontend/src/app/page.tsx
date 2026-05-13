@@ -1,4 +1,6 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { 
   Ticket, 
   Users, 
@@ -10,11 +12,41 @@ import {
   Play,
   Calendar,
   MapPin,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
+import apiClient from '@/lib/api-client';
+
+interface Event {
+  id: string;
+  title: string;
+  slug: string;
+  startDatetime: string;
+  venueName: string;
+  tickets: { price: number }[];
+  organizer: { fullName: string };
+}
 
 export default function LandingPage() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await apiClient.get<Event[]>('/events');
+        setEvents(response.data.slice(0, 3)); // Show first 3 for preview
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
   return (
     <main className="min-h-screen bg-neutral-950 text-white selection:bg-indigo-500/30 overflow-x-hidden">
       
@@ -45,7 +77,6 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative pt-40 pb-24 lg:pt-56 lg:pb-40 overflow-hidden">
-        {/* Background Gradients */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full" />
           <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-cyan-600/10 blur-[120px] rounded-full" />
@@ -76,21 +107,6 @@ export default function LandingPage() {
             </button>
           </div>
         </div>
-
-        {/* Dashboard Preview UI */}
-        <div className="max-w-6xl mx-auto px-6 mt-24 animate-in fade-in zoom-in duration-1000">
-          <div className="relative p-2 rounded-[2.5rem] bg-gradient-to-b from-white/10 to-transparent border border-white/10">
-            <div className="bg-neutral-950 rounded-[2rem] overflow-hidden border border-white/5 aspect-[16/9] shadow-2xl relative">
-              <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80" alt="Dashboard" className="w-full h-full object-cover opacity-50" />
-              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-[0_0_40px_rgba(79,70,229,0.6)]">
-                  <Play size={32} className="fill-white ml-1" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Features Grid */}
@@ -103,11 +119,11 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: <Zap className="text-amber-400" />, title: "Real-time Booking", desc: "Atomic seat locking using Redis ensure no double-bookings even at peak traffic." },
+              { icon: <Zap className="text-amber-400" />, title: "Real-time Booking", desc: "Atomic seat locking ensure no double-bookings even at peak traffic." },
               { icon: <ShieldCheck className="text-emerald-400" />, title: "Secure Payments", desc: "Integrated Stripe & SSLCommerz support for global and local transactions." },
               { icon: <Users className="text-indigo-400" />, title: "Multivendor Engine", desc: "Allow multiple organizers and vendors to list events and manage booths." },
               { icon: <BarChart3 className="text-cyan-400" />, title: "Advanced Analytics", desc: "Track ROI, ticket heatmaps, and vendor lead retrieval in one dashboard." },
-              { icon: <Globe className="text-purple-400" />, title: "Global Reach", desc: "Multi-currency and multi-language support for international audiences." },
+              { icon: <Globe className="text-purple-400" />, title: "Global Reach", desc: "Multi-currency support for international audiences." },
               { icon: <Ticket className="text-pink-400" />, title: "QR Ticketing", desc: "Automated QR code generation and mobile-friendly check-in systems." },
             ].map((f, i) => (
               <div key={i} className="p-8 rounded-3xl bg-neutral-900/40 border border-white/5 hover:border-indigo-500/30 transition-all hover:bg-neutral-900/60 group">
@@ -118,18 +134,6 @@ export default function LandingPage() {
                 <p className="text-neutral-400 leading-relaxed">{f.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Trust Section */}
-      <section className="py-24 border-y border-white/5 bg-neutral-900/20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-wrap items-center justify-center gap-12 lg:gap-24 opacity-40 grayscale hover:grayscale-0 transition-all">
-            <div className="text-2xl font-bold tracking-tighter">TECHSUMMIT</div>
-            <div className="text-2xl font-bold tracking-tighter">FUTURECON</div>
-            <div className="text-2xl font-bold tracking-tighter">WEB3.DEV</div>
-            <div className="text-2xl font-bold tracking-tighter">DESIGNWEEK</div>
           </div>
         </div>
       </section>
@@ -147,122 +151,65 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="group rounded-[2rem] bg-neutral-900/40 border border-white/5 overflow-hidden hover:border-white/20 transition-all shadow-2xl">
-                <div className="relative h-64">
-                  <img src={`https://images.unsplash.com/photo-${1540575467063 + i}-178a50c2df87?w=800&q=80`} alt="Event" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10">
-                    FEATURED
-                  </div>
-                </div>
-                <div className="p-8">
-                  <h3 className="text-2xl font-bold mb-4">International Developers Summit 2026</h3>
-                  <div className="space-y-3 mb-8">
-                    <div className="flex items-center text-neutral-400 text-sm gap-3">
-                      <Calendar size={16} className="text-indigo-400" /> May 12-14, 2026
-                    </div>
-                    <div className="flex items-center text-neutral-400 text-sm gap-3">
-                      <MapPin size={16} className="text-cyan-400" /> San Francisco, CA
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                    <div className="flex items-center gap-1">
-                      <Star size={16} className="text-amber-400 fill-amber-400" />
-                      <span className="font-bold">4.9</span>
-                      <span className="text-neutral-500 text-sm ml-1">(120 Reviews)</span>
-                    </div>
-                    <Link href="/events" className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-neutral-200 transition-colors">
-                      Book Now
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="relative p-12 lg:p-24 rounded-[3rem] bg-indigo-600 overflow-hidden text-center">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
-            <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/10 blur-[100px] rounded-full -mr-48 -mt-48" />
-            
-            <div className="relative z-10 space-y-8 max-w-3xl mx-auto">
-              <h2 className="text-5xl lg:text-7xl font-black tracking-tight text-white">Ready to launch <br/> your next event?</h2>
-              <p className="text-xl text-indigo-100/80 font-medium">Join 500+ organizers already scaling their business with MVEMS.</p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <Link href="/register" className="w-full sm:w-auto px-10 py-5 bg-white text-black rounded-2xl font-bold text-lg hover:bg-neutral-100 transition-all shadow-2xl">
-                  Get Started for Free
-                </Link>
-                <button className="w-full sm:w-auto px-10 py-5 bg-indigo-700 text-white border border-indigo-500/50 rounded-2xl font-bold text-lg hover:bg-indigo-800 transition-all">
-                  Contact Sales
-                </button>
-              </div>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4 text-neutral-500">
+              <Loader2 className="animate-spin" size={40} />
+              <p className="font-medium">Discovering the best events for you...</p>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {events.length > 0 ? events.map((event) => (
+                <div key={event.id} className="group rounded-[2rem] bg-neutral-900/40 border border-white/5 overflow-hidden hover:border-white/20 transition-all shadow-2xl">
+                  <div className="relative h-64">
+                    <img 
+                      src={`https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80`} 
+                      alt={event.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    />
+                    <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10">
+                      FEATURED
+                    </div>
+                  </div>
+                  <div className="p-8">
+                    <h3 className="text-2xl font-bold mb-4 line-clamp-1">{event.title}</h3>
+                    <div className="space-y-3 mb-8">
+                      <div className="flex items-center text-neutral-400 text-sm gap-3">
+                        <Calendar size={16} className="text-indigo-400" /> {new Date(event.startDatetime).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center text-neutral-400 text-sm gap-3">
+                        <MapPin size={16} className="text-cyan-400" /> {event.venueName || 'Online'}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                      <div className="flex items-center gap-1">
+                        <Star size={16} className="text-amber-400 fill-amber-400" />
+                        <span className="font-bold">4.9</span>
+                        <span className="text-neutral-500 text-sm ml-1">By {event.organizer.fullName}</span>
+                      </div>
+                      <Link href={`/events/${event.slug}`} className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-neutral-200 transition-colors">
+                        Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="col-span-full text-center py-12 text-neutral-500">
+                   No upcoming events found. Stay tuned!
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Footer */}
       <footer className="pt-24 pb-12 border-t border-white/5 bg-neutral-950">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
-            <div className="space-y-6">
-              <div className="text-2xl font-black tracking-tighter text-white">MVEMS</div>
-              <p className="text-neutral-500 leading-relaxed">
-                Empowering the event industry with cutting-edge technology and seamless multivendor integration.
-              </p>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors">
-                  <Globe size={18} />
-                </div>
-                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors">
-                  <Users size={18} />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-bold mb-6">Platform</h4>
-              <ul className="space-y-4 text-sm text-neutral-500">
-                <li><Link href="/events" className="hover:text-white transition-colors">Event Discovery</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white transition-colors">Organizer Portal</Link></li>
-                <li><Link href="/vendor" className="hover:text-white transition-colors">Vendor Hub</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing Plans</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-bold mb-6">Support</h4>
-              <ul className="space-y-4 text-sm text-neutral-500">
-                <li><Link href="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
-                <li><Link href="/docs/api" className="hover:text-white transition-colors">API Reference</Link></li>
-                <li><Link href="/status" className="hover:text-white transition-colors">Status Page</Link></li>
-                <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-bold mb-6">Newsletter</h4>
-              <p className="text-sm text-neutral-500 mb-4">Get the latest event trends and platform updates.</p>
-              <div className="flex gap-2">
-                <input type="email" placeholder="Email" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
-                <button className="bg-white text-black p-2.5 rounded-xl hover:bg-neutral-200 transition-colors">
-                  <ArrowRight size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-neutral-600 font-medium">
+          <div className="pt-12 flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-neutral-600 font-medium">
             <div>© 2026 MVEMS Platform. Built with passion for organizers.</div>
             <div className="flex gap-8">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
+              <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>

@@ -1,35 +1,40 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Ticket, Search, Filter, Loader2, Download } from 'lucide-react';
-import apiClient from '@/lib/api-client';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Search, Filter, Loader2, Download } from 'lucide-react';
+
+interface Order {
+  id: string;
+  name: string;
+  event: string;
+  amount: number;
+  status: string;
+  date: string;
+}
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // In a real app, we would fetch from /orders. For demo, we use attendee report logic.
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
-      // Mocking order list for now using existing services
-      // This shows the connection is ready for integration
-      setTimeout(() => {
-        setOrders([
-          { id: 'ORD-1021', name: 'John Doe', event: 'Global Tech Summit', amount: 299, status: 'Completed', date: '2026-05-10' },
-          { id: 'ORD-1022', name: 'Sarah Miller', event: 'AI Workshop', amount: 150, status: 'Completed', date: '2026-05-11' },
-          { id: 'ORD-1023', name: 'Robert Fox', event: 'Web3 Meetup', amount: 0, status: 'Pending', date: '2026-05-12' },
-        ]);
-        setLoading(false);
-      }, 800);
+      // In a real app, we would fetch from /orders. For demo, we keep the structure but with proper timing.
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setOrders([
+        { id: 'ORD-1021', name: 'John Doe', event: 'Global Tech Summit', amount: 299, status: 'Completed', date: '2026-05-10' },
+        { id: 'ORD-1022', name: 'Sarah Miller', event: 'AI Workshop', amount: 150, status: 'Completed', date: '2026-05-11' },
+        { id: 'ORD-1023', name: 'Robert Fox', event: 'Web3 Meetup', amount: 0, status: 'Pending', date: '2026-05-12' },
+      ]);
     } catch (error) {
       console.error('Error fetching orders:', error);
+    } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchOrders().catch(console.error);
+  }, [fetchOrders]);
 
   return (
     <div className="space-y-10">

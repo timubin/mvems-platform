@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { CheckCircle2, Calendar, MapPin, Ticket, ArrowRight, Download } from 'lucide-react';
+import { CheckCircle2, Calendar, ArrowRight, Download } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PaymentSuccessPage() {
@@ -16,7 +16,7 @@ export default function PaymentSuccessPage() {
         </div>
 
         <h1 className="text-4xl font-black mb-4">Payment Successful!</h1>
-        <p className="text-neutral-400 font-medium mb-12">Your tickets have been confirmed. We've sent a copy to your email.</p>
+        <p className="text-neutral-400 font-medium mb-12">Your tickets have been confirmed. We&apos;ve sent a copy to your email.</p>
 
         {/* Order Details Summary */}
         <div className="bg-neutral-950/50 rounded-3xl p-8 border border-white/5 text-left space-y-6 mb-12">

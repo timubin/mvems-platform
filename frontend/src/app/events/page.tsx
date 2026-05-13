@@ -1,29 +1,42 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Calendar, MapPin, Users, Ticket, Search, Filter, Loader2 } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Calendar, MapPin, Ticket, Search, Filter, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 
+interface Event {
+  id: string;
+  title: string;
+  slug: string;
+  startDatetime: string;
+  venueName: string;
+  coverImage?: string;
+  category?: string;
+}
+
 export default function EventsPage() {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetchEvents();
-  }, [search]);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
-      const response = await apiClient.get(`/events?search=${search}`);
+      const response = await apiClient.get<Event[]>(`/events?search=${encodeURIComponent(search)}`);
       setEvents(response.data);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchEvents();
+    };
+    init();
+  }, [fetchEvents]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white selection:bg-indigo-500/30">
@@ -78,9 +91,8 @@ export default function EventsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {events.map((event: any) => (
+            {events.map((event) => (
               <div key={event.id} className="group rounded-3xl border border-white/5 bg-neutral-900/50 overflow-hidden hover:bg-neutral-900 transition-all duration-300 hover:border-indigo-500/30 hover:shadow-2xl hover:-translate-y-1">
-                {/* Event Image */}
                 <div className="relative h-52 w-full overflow-hidden">
                   <img 
                     src={event.coverImage || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80"} 
@@ -94,18 +106,17 @@ export default function EventsPage() {
                   </div>
                 </div>
 
-                {/* Event Details */}
                 <div className="p-8">
                   <h3 className="text-xl font-bold text-white mb-4 line-clamp-1 group-hover:text-indigo-400 transition-colors">{event.title}</h3>
                   
                   <div className="space-y-3 mb-8">
                     <div className="flex items-center text-sm text-neutral-400 gap-3 font-medium">
                       <Calendar size={16} className="text-indigo-500" />
-                      <span>{new Date(event.startDate).toLocaleDateString()}</span>
+                      <span>{new Date(event.startDatetime).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center text-sm text-neutral-400 gap-3 font-medium">
                       <MapPin size={16} className="text-cyan-500" />
-                      <span className="line-clamp-1">{event.location}</span>
+                      <span className="line-clamp-1">{event.venueName || 'Online'}</span>
                     </div>
                   </div>
 

@@ -1,15 +1,21 @@
 "use client";
 
-import React from 'react';
-import { LayoutDashboard, Ticket, Users, Store, Settings, LogOut, Calendar } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { LayoutDashboard, Ticket, Users, Store, Settings, LogOut, Calendar, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  
+  // Use initializer to avoid cascading render in useEffect
+  const [isAuthorized, setIsAuthorized] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('token');
+    }
+    return false;
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -40,7 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Orders', icon: Ticket, path: '/dashboard/orders' },
     { name: 'Attendees', icon: Users, path: '/dashboard/attendees' },
     { name: 'Booths', icon: Store, path: '/dashboard/booths' },
-    { name: 'Profile', icon: User, path: '/dashboard/profile' },
+    { name: 'Profile', icon: UserIcon, path: '/dashboard/profile' },
   ];
 
   return (

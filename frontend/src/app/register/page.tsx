@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import axios from 'axios';
+import apiClient from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
+import { AxiosError } from 'axios';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -21,7 +22,7 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      await axios.post('http://localhost:3001/auth/register', {
+      await apiClient.post('/auth/register', {
         fullName,
         email,
         password,
@@ -32,8 +33,9 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push('/login');
       }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      const axiosError = err as AxiosError<{ message: string }>;
+      setError(axiosError.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -138,9 +140,9 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <p className="text-center text-sm text-neutral-500 mt-8">
+        <div className="text-center text-sm text-neutral-500 mt-8">
           Already have an account? <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Sign in</Link>
-        </p>
+        </div>
       </div>
     </div>
   );

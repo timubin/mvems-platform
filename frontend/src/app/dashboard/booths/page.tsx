@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Store, Plus, MapPin, CheckCircle2, Clock } from 'lucide-react';
+import { Store, Plus, MapPin } from 'lucide-react';
 
 export default function BoothsPage() {
   const booths = [

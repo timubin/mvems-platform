@@ -11,10 +11,37 @@ import { NotificationModule } from './notification/notification.module';
 import { ReviewModule } from './review/review.module';
 import { VendorModule } from './vendor/vendor.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { PrismaModule } from './prisma.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
-  imports: [AuthModule, UsersModule, EventModule, TicketModule, OrderModule, PaymentModule, NotificationModule, ReviewModule, VendorModule, AnalyticsModule],
+  imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100, // General limit: 100 requests per minute
+      },
+    ]),
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    EventModule,
+    TicketModule,
+    OrderModule,
+    PaymentModule,
+    NotificationModule,
+    ReviewModule,
+    VendorModule,
+    AnalyticsModule,
+  ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

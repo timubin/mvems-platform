@@ -1,29 +1,40 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Calendar, MapPin, MoreVertical, Edit, Trash, Loader2 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Link from 'next/link';
 
+interface MyEvent {
+  id: string;
+  title: string;
+  startDatetime: string;
+  venueName: string;
+  coverImage?: string;
+}
+
 export default function MyEventsPage() {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<MyEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchMyEvents();
-  }, []);
-
-  const fetchMyEvents = async () => {
+  const fetchMyEvents = useCallback(async () => {
     try {
       // In a real app, this would filter by the logged-in user's ID
-      const response = await apiClient.get('/events');
+      const response = await apiClient.get<MyEvent[]>('/events');
       setEvents(response.data);
     } catch (error) {
       console.error('Error fetching my events:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchMyEvents();
+    };
+    init();
+  }, [fetchMyEvents]);
 
   return (
     <div className="space-y-10">
@@ -49,7 +60,7 @@ export default function MyEventsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {events.map((event: any) => (
+          {events.map((event) => (
             <div key={event.id} className="bg-neutral-900/60 border border-white/5 rounded-3xl p-6 flex gap-6 hover:border-white/10 transition-all group">
               <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0">
                 <img src={event.coverImage || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&q=80"} className="w-full h-full object-cover" alt="" />
@@ -61,10 +72,10 @@ export default function MyEventsPage() {
                 </div>
                 <div className="mt-2 space-y-1">
                    <div className="flex items-center text-xs text-neutral-500 gap-2">
-                     <Calendar size={14} /> {new Date(event.startDate).toLocaleDateString()}
+                     <Calendar size={14} /> {new Date(event.startDatetime).toLocaleDateString()}
                    </div>
                    <div className="flex items-center text-xs text-neutral-500 gap-2">
-                     <MapPin size={14} /> {event.location}
+                     <MapPin size={14} /> {event.venueName || 'Online'}
                    </div>
                 </div>
                 <div className="mt-4 flex gap-2">
