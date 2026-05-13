@@ -1,8 +1,45 @@
-import React from 'react';
-import { Mail, Lock, ArrowRight, User } from 'lucide-react';
+"use client";
+
+import React, { useState } from 'react';
+import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      // Connecting to our NestJS Backend (running on port 3001)
+      const response = await axios.post('http://localhost:3001/auth/login', {
+        email,
+        password,
+      });
+
+      console.log('Login successful!', response.data);
+      
+      // Store session info
+      localStorage.setItem('token', response.data.accessToken);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+
+      // Redirect to Dashboard
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6 relative overflow-hidden">
       {/* Background Glows */}
@@ -21,19 +58,28 @@ export default function LoginPage() {
 
         {/* Form Card */}
         <div className="bg-neutral-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleLogin}>
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3.5 rounded-xl animate-in fade-in zoom-in duration-300">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-4">
               {/* Email Input */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-neutral-300 ml-1">Email</label>
+                <label className="text-sm font-medium text-neutral-300 ml-1">Email Address</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-neutral-500 group-focus-within:text-indigo-400 transition-colors">
                     <Mail size={18} />
                   </div>
                   <input 
                     type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                     placeholder="name@example.com"
-                    className="w-full bg-neutral-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    className="w-full bg-neutral-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                   />
                 </div>
               </div>
@@ -50,22 +96,30 @@ export default function LoginPage() {
                   </div>
                   <input 
                     type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                     placeholder="••••••••"
-                    className="w-full bg-neutral-950/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    className="w-full bg-neutral-950/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                   />
                 </div>
               </div>
             </div>
 
-            <button type="button" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3.5 font-medium transition-all transform hover:-translate-y-0.5 shadow-[0_0_20px_rgba(79,70,229,0.3)] flex items-center justify-center gap-2">
-              Sign In <ArrowRight size={18} />
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-medium transition-all transform hover:-translate-y-0.5 shadow-[0_0_20px_rgba(79,70,229,0.3)] flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : 'Sign In'}
+              {!loading && <ArrowRight size={18} />}
             </button>
           </form>
 
           {/* Divider */}
           <div className="mt-8 flex items-center gap-4">
             <div className="flex-1 h-px bg-white/5" />
-            <span className="text-xs text-neutral-500 font-medium">OR CONTINUE WITH</span>
+            <span className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Or continue with</span>
             <div className="flex-1 h-px bg-white/5" />
           </div>
 
@@ -80,7 +134,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-neutral-500 mt-8">
-          Don't have an account? <a href="#" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Sign up</a>
+          Don't have an account? <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Sign up for free</Link>
         </p>
       </div>
     </div>

@@ -5,46 +5,49 @@ import { PrismaService } from '../prisma.service';
 export class AuthService {
   constructor(private prisma: PrismaService) {}
 
-  async register(data: any) {
+  async register(email: string, password: string, fullName: string, role?: string) {
     // Check if user exists
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email }
+      where: { email }
     });
 
     if (existingUser) {
       throw new ConflictException('Email already in use');
     }
 
-    // In a real scenario, hash the password using bcrypt here!
-    const passwordHash = `hashed_${data.password}`; 
+    // In a real scenario, use bcrypt to hash the password
+    const passwordHash = `hashed_${password}`; 
 
     const user = await this.prisma.user.create({
       data: {
-        email: data.email,
+        email,
         passwordHash,
-        fullName: data.fullName,
-        role: data.role || 'ATTENDEE'
+        fullName,
+        role: role || 'ATTENDEE'
       }
     });
 
     return { message: 'User registered successfully', userId: user.id };
   }
 
-  async login(data: any) {
+  async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
-      where: { email: data.email }
+      where: { email }
     });
 
-    // In a real scenario, compare hashed passwords using bcrypt
-    if (!user || user.passwordHash !== `hashed_${data.password}`) {
-      throw new UnauthorizedException('Invalid credentials');
+    // In a real scenario, use bcrypt.compare
+    if (user && user.passwordHash === `hashed_${password}`) {
+      return user;
     }
+    return null;
+  }
 
-    // Return JWT token here
+  async login(user: any) {
+    // Return JWT token here (Normally you'd use JwtService)
     return {
       message: 'Login successful',
-      accessToken: 'sample_jwt_token_here',
-      user: { id: user.id, email: user.email, role: user.role }
+      accessToken: 'sample_jwt_token_for_demo',
+      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role }
     };
   }
 }
