@@ -1,12 +1,16 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService
+  ) {}
 
   async register(email: string, password: string, fullName: string, role?: string) {
-    // Check if user exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email }
     });
@@ -15,15 +19,16 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
-    // In a real scenario, use bcrypt to hash the password
-    const passwordHash = `hashed_${password}`; 
+    // Hashing password for real security
+    const salt = await bcrypt.genSalt();
+    const passwordHash = await bcrypt.hash(password, salt);
 
     const user = await this.prisma.user.create({
       data: {
         email,
         passwordHash,
         fullName,
-        role: role || 'ATTENDEE'
+        role: (role as any) || 'ATTENDEE'
       }
     });
 
@@ -35,18 +40,18 @@ export class AuthService {
       where: { email }
     });
 
-    // In a real scenario, use bcrypt.compare
-    if (user && user.passwordHash === `hashed_${password}`) {
-      return user;
+    if (user && await bcrypt.compare(password, user.passwordHash)) {
+      const { passwordHash, ...result } = user;
+      return result;
     }
     return null;
   }
 
   async login(user: any) {
-    // Return JWT token here (Normally you'd use JwtService)
+    const payload = { email: user.email, sub: user.id, role: user.role };
     return {
       message: 'Login successful',
-      accessToken: 'sample_jwt_token_for_demo',
+      accessToken: this.jwtService.sign(payload),
       user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role }
     };
   }

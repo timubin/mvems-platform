@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventController = void 0;
 const common_1 = require("@nestjs/common");
 const event_service_1 = require("./event.service");
+const passport_1 = require("@nestjs/passport");
 let EventController = class EventController {
     eventService;
     constructor(eventService) {
@@ -32,6 +33,7 @@ let EventController = class EventController {
 };
 exports.EventController = EventController;
 __decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),

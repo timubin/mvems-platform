@@ -4,10 +4,29 @@ import React from 'react';
 import { LayoutDashboard, Ticket, Users, Store, Settings, LogOut, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+    } else {
+      setIsAuthorized(true);
+    }
+  }, [router]);
+
+  if (!isAuthorized) {
+    return (
+      <div className="h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -21,6 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Orders', icon: Ticket, path: '/dashboard/orders' },
     { name: 'Attendees', icon: Users, path: '/dashboard/attendees' },
     { name: 'Booths', icon: Store, path: '/dashboard/booths' },
+    { name: 'Profile', icon: User, path: '/dashboard/profile' },
   ];
 
   return (
