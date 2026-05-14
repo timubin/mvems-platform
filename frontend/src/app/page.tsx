@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
+import { getDemoEvents } from '@/lib/demo-data';
 
 interface Event {
   id: string;
@@ -37,13 +38,17 @@ export default function LandingPage() {
       try {
         const response = await apiClient.get<Event[]>('/events');
         if (Array.isArray(response.data)) {
-          setEvents(response.data.slice(0, 3));
+          setEvents((response.data.length > 0 ? response.data : getDemoEvents()).slice(0, 3));
         } else if (response.data && (response.data as any).data) {
           // Handle object wrapped data if needed
-          setEvents((response.data as any).data.slice(0, 3));
+          const data = (response.data as any).data;
+          setEvents((data.length > 0 ? data : getDemoEvents()).slice(0, 3));
+        } else {
+          setEvents(getDemoEvents().slice(0, 3));
         }
       } catch (error) {
         console.error('Failed to fetch events:', error);
+        setEvents(getDemoEvents().slice(0, 3));
       } finally {
         setLoading(false);
       }

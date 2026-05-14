@@ -5,12 +5,14 @@ import { CreditCard, Lock, ArrowRight, Loader2, CheckCircle2 } from 'lucide-reac
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
+import { DEMO_EVENTS } from '@/lib/demo-data';
 
 interface CheckoutEvent {
   id: string;
   title: string;
   coverImage?: string;
   location?: string;
+  venueName?: string;
 }
 
 function CheckoutContent() {
@@ -31,9 +33,11 @@ function CheckoutContent() {
       const response = await apiClient.get<CheckoutEvent[]>(`/events`);
       // For demo, find the matching event or use first one
       const found = response.data.find((e) => e.id === eventId) || response.data[0];
-      setEvent(found || null);
+      setEvent(found || DEMO_EVENTS[0]);
     } catch (error) {
       console.error('Error fetching event details:', error);
+      const found = DEMO_EVENTS.find((e) => e.id === eventId) || DEMO_EVENTS[0];
+      setEvent(found);
     } finally {
       setLoading(false);
     }
@@ -132,7 +136,7 @@ function CheckoutContent() {
                 </div>
                 <div>
                   <h3 className="font-bold text-white text-lg leading-tight mb-2">{event?.title || "Event Tickets"}</h3>
-                  <p className="text-sm text-neutral-500 font-medium">{event?.location || "Global Event"}</p>
+                  <p className="text-sm text-neutral-500 font-medium">{event?.location || event?.venueName || "Global Event"}</p>
                 </div>
               </div>
 

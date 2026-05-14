@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Calendar, MapPin, Ticket, Search, Filter, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
+import { getDemoEvents } from '@/lib/demo-data';
 
 interface Event {
   id: string;
@@ -23,9 +24,10 @@ export default function EventsPage() {
   const fetchEvents = useCallback(async () => {
     try {
       const response = await apiClient.get<Event[]>(`/events?search=${encodeURIComponent(search)}`);
-      setEvents(response.data);
+      setEvents(response.data.length > 0 ? response.data : getDemoEvents(search));
     } catch (error) {
       console.error('Error fetching events:', error);
+      setEvents(getDemoEvents(search));
     } finally {
       setLoading(false);
     }

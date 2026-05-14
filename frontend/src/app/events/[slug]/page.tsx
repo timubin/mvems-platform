@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DEMO_EVENTS } from '@/lib/demo-data';
 
 interface TicketTier {
   id: string;
@@ -66,7 +67,12 @@ export default function EventDetailsPage() {
         setEvent(response.data);
       } catch (err: any) {
         console.error('Error fetching event details:', err);
-        setError('Event not found or failed to load.');
+        const demoEvent = DEMO_EVENTS.find((item) => item.slug === slug);
+        if (demoEvent) {
+          setEvent(demoEvent as Event);
+        } else {
+          setError('Event not found or failed to load.');
+        }
       } finally {
         setLoading(false);
       }

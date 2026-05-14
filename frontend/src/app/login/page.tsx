@@ -6,6 +6,12 @@ import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
+import {
+  DEMO_ACCESS_TOKEN,
+  DEMO_ADMIN_EMAIL,
+  DEMO_ADMIN_PASSWORD,
+  DEMO_USER,
+} from '@/lib/demo-data';
 
 interface LoginResponse {
   accessToken: string;
@@ -24,6 +30,17 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  const completeLogin = (data: LoginResponse) => {
+    localStorage.setItem('token', data.accessToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    router.push('/dashboard');
+    router.refresh();
+  };
+
+  const canUseDemoLogin =
+    email.trim().toLowerCase() === DEMO_ADMIN_EMAIL &&
+    password.trim() === DEMO_ADMIN_PASSWORD;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -35,16 +52,16 @@ export default function LoginPage() {
         password,
       });
 
-      console.log('Login successful!', response.data);
-      
-      // Store session info
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-
-      // Redirect to Dashboard
-      router.push('/dashboard');
-      router.refresh(); // Ensure layout guards pick up the new token
+      completeLogin(response.data);
     } catch (err: unknown) {
+      if (canUseDemoLogin) {
+        completeLogin({
+          accessToken: DEMO_ACCESS_TOKEN,
+          user: DEMO_USER,
+        });
+        return;
+      }
+
       const axiosError = err as AxiosError<{ message: string }>;
       setError(axiosError.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
