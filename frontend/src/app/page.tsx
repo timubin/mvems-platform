@@ -36,7 +36,12 @@ export default function LandingPage() {
     const fetchEvents = async () => {
       try {
         const response = await apiClient.get<Event[]>('/events');
-        setEvents(response.data.slice(0, 3)); // Show first 3 for preview
+        if (Array.isArray(response.data)) {
+          setEvents(response.data.slice(0, 3));
+        } else if (response.data && (response.data as any).data) {
+          // Handle object wrapped data if needed
+          setEvents((response.data as any).data.slice(0, 3));
+        }
       } catch (error) {
         console.error('Failed to fetch events:', error);
       } finally {
@@ -58,10 +63,10 @@ export default function LandingPage() {
           </Link>
           
           <div className="hidden lg:flex gap-10 text-sm font-semibold text-neutral-400">
-            <a href="#features" className="hover:text-indigo-400 transition-colors">Features</a>
-            <a href="#events" className="hover:text-indigo-400 transition-colors">Discovery</a>
-            <a href="#dashboard" className="hover:text-indigo-400 transition-colors">Organizer</a>
-            <a href="#pricing" className="hover:text-indigo-400 transition-colors">Pricing</a>
+            <Link href="/events" className="hover:text-indigo-400 transition-colors">Discovery</Link>
+            <Link href="/dashboard" className="hover:text-indigo-400 transition-colors">Organizer</Link>
+            <Link href="/vendor" className="hover:text-indigo-400 transition-colors">Vendor Hub</Link>
+            <Link href="/pricing" className="hover:text-indigo-400 transition-colors">Pricing</Link>
           </div>
 
           <div className="flex items-center gap-6">

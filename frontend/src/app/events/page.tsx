@@ -46,8 +46,10 @@ export default function EventsPage() {
           <Link href="/" className="text-xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
             MVEMS
           </Link>
-          <div className="flex gap-4">
-            <Link href="/dashboard" className="text-sm font-medium hover:text-indigo-400 transition-colors flex items-center h-full">Dashboard</Link>
+          <div className="flex gap-8 items-center h-full">
+            <Link href="/events" className="text-sm font-bold text-indigo-400 border-b-2 border-indigo-500 h-16 flex items-center">Discovery</Link>
+            <Link href="/dashboard" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">Dashboard</Link>
+            <Link href="/vendor" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">Vendor Hub</Link>
           </div>
         </div>
       </nav>

@@ -12,6 +12,7 @@ import { ReviewModule } from './review/review.module';
 import { VendorModule } from './vendor/vendor.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { PrismaModule } from './prisma.module';
+import { EmailModule } from './email/email.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -24,6 +25,7 @@ import { APP_GUARD } from '@nestjs/core';
       },
     ]),
     PrismaModule,
+    EmailModule,
     AuthModule,
     UsersModule,
     EventModule,
