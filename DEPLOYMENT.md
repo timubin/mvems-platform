@@ -19,6 +19,13 @@ docker-compose up --build
 5.  **SSL/Reverse Proxy**: Use Nginx with Certbot (Let's Encrypt).
 
 ## 3. Managed Platforms
+### Vercel Multi-service Project
+-   Deploy the repository root (`./`).
+-   Keep the included root `vercel.json`.
+-   The frontend is routed at `/`.
+-   The backend is routed at `/_/backend`.
+-   In this mode `NEXT_PUBLIC_API_URL` is optional because the frontend falls back to `/_/backend`.
+
 ### Frontend (Vercel)
 -   Connect your GitHub repo.
 -   Set `Root Directory` to `frontend`.

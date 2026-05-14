@@ -11,6 +11,17 @@ Use this account after deployment to open the dashboard:
 
 ## Vercel Setup
 
+### Option 1: Multi-service Project
+
+Deploy the repository root (`./`). The root `vercel.json` maps:
+
+- `frontend` to `/`
+- `backend` to `/_/backend`
+
+In this mode the frontend can use the included API fallback, so `NEXT_PUBLIC_API_URL` is optional.
+
+### Option 2: Two Separate Projects
+
 Create two Vercel projects from the same GitHub repository.
 
 ### Backend
