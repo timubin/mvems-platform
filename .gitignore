@@ -14,6 +14,7 @@ build/
 # OS Files
 .DS_Store
 Thumbs.db
+*.log
 
 # Test Files
 backend/test-db.js

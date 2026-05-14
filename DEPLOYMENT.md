@@ -22,13 +22,22 @@ docker-compose up --build
 ### Frontend (Vercel)
 -   Connect your GitHub repo.
 -   Set `Root Directory` to `frontend`.
--   Environment Variable: `NEXT_PUBLIC_API_URL` (points to your backend).
+-   Environment Variable: `NEXT_PUBLIC_API_URL` (points to your backend Vercel URL).
 
-### Backend (Railway / Render / Render)
--   Connect your GitHub repo.
+### Backend (Vercel)
+-   Connect the same GitHub repo as a second Vercel project.
 -   Set `Root Directory` to `backend`.
--   Use the `Dockerfile` or `npm run start:prod`.
--   Provision a PostgreSQL and Redis instance.
+-   Keep the included `backend/vercel.json`.
+-   Environment Variables:
+    -   `JWT_SECRET`: secure random string.
+    -   `CORS_ORIGIN`: frontend Vercel URL, for example `https://your-frontend.vercel.app`.
+    -   `DATABASE_URL`: optional for demo login/dashboard preview; required for persistent users/events.
+    -   `REDIS_URL`: optional.
+-   Test the deployed API at `/health`.
+
+Demo admin login for dashboard preview:
+-   Email: `admin@mvems.com`
+-   Password: `Admin@123`
 
 ## 4. Production Database Setup
 -   **Migrations**: Always run `npm run db:migrate:prod` during deployment.

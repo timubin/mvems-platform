@@ -3,12 +3,18 @@ import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-  private client: Redis;
+  private client?: Redis;
   private readonly logger = new Logger('RedisService');
 
   onModuleInit() {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) {
+      this.logger.warn('REDIS_URL is not set. Redis cache is disabled.');
+      return;
+    }
+
     this.client = new Redis(redisUrl, {
+      lazyConnect: true,
       maxRetriesPerRequest: null,
     });
 
@@ -22,6 +28,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async set(key: string, value: any, ttl?: number) {
+    if (!this.client) return;
     const val = typeof value === 'string' ? value : JSON.stringify(value);
     if (ttl) {
       await this.client.set(key, val, 'EX', ttl);
@@ -31,6 +38,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async get<T>(key: string): Promise<T | null> {
+    if (!this.client) return null;
     const val = await this.client.get(key);
     if (!val) return null;
     try {
@@ -41,10 +49,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async del(key: string) {
+    if (!this.client) return;
     await this.client.del(key);
   }
 
   onModuleDestroy() {
-    this.client.disconnect();
+    this.client?.disconnect();
   }
 }
